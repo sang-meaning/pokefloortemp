@@ -14,6 +14,12 @@ public record PokemonDto(
         double weightKg,
         Sprites sprites
 ) {
-    /** front = 화면 아래쪽(관람자 쪽)으로 걸을 때, back = 위쪽(안쪽)으로 걸을 때 */
-    public record Sprites(String frontAnimated, String backAnimated, String frontStatic) {}
+    /**
+     * frontAnimated/backAnimated : 움직이는 GIF (아래쪽/위쪽으로 걸을 때)
+     * frontStatic                : 기본 도트 PNG
+     * home                       : 고해상도 3D 렌더 PNG (512px, 정지)
+     * officialArtwork            : 고해상도 공식 일러스트 PNG (정지)
+     */
+    public record Sprites(String frontAnimated, String backAnimated, String frontStatic,
+                          String home, String officialArtwork) {}
 }

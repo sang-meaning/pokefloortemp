@@ -54,7 +54,9 @@ public class PokemonService {
                 types,
                 p.path("height").asInt() / 10.0,
                 p.path("weight").asInt() / 10.0,
-                new PokemonDto.Sprites(front, back, sprites.path("front_default").asString(null))
+                new PokemonDto.Sprites(front, back, sprites.path("front_default").asString(null),
+                        sprites.path("other").path("home").path("front_default").asString(null),
+                        sprites.path("other").path("official-artwork").path("front_default").asString(null))
         );
     }
 

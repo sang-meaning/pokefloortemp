@@ -1,0 +1,212 @@
+{
+ "wall_SE": {
+  "w": 80,
+  "h": 153,
+  "ax": 3.0,
+  "ay": 153
+ },
+ "wall_SW": {
+  "w": 80,
+  "h": 154,
+  "ax": 74.5,
+  "ay": 154
+ },
+ "wallWindow_SE": {
+  "w": 80,
+  "h": 153,
+  "ax": 3.0,
+  "ay": 153
+ },
+ "wallWindow_SW": {
+  "w": 80,
+  "h": 154,
+  "ax": 74.5,
+  "ay": 154
+ },
+ "bookcaseOpen_SW": {
+  "w": 49,
+  "h": 101,
+  "ax": 29.5,
+  "ay": 101
+ },
+ "bookcaseClosedWide_SW": {
+  "w": 80,
+  "h": 116,
+  "ax": 59.5,
+  "ay": 116
+ },
+ "desk_SE": {
+  "w": 85,
+  "h": 88,
+  "ax": 28.0,
+  "ay": 88
+ },
+ "chairDesk_NW": {
+  "w": 44,
+  "h": 56,
+  "ax": 19.5,
+  "ay": 56
+ },
+ "computerScreen_SE": {
+  "w": 35,
+  "h": 43,
+  "ax": 8.1,
+  "ay": 43
+ },
+ "pottedPlant_SW": {
+  "w": 21,
+  "h": 60,
+  "ax": 8.5,
+  "ay": 60
+ },
+ "lampRoundFloor_SE": {
+  "w": 19,
+  "h": 76,
+  "ax": 8.0,
+  "ay": 76
+ },
+ "plantSmall1_SE": {
+  "w": 11,
+  "h": 14,
+  "ax": 4.5,
+  "ay": 14
+ },
+ "loungeSofa_SW": {
+  "w": 103,
+  "h": 103,
+  "ax": 72.5,
+  "ay": 103
+ },
+ "tableCoffee_SW": {
+  "w": 80,
+  "h": 74,
+  "ax": 49.0,
+  "ay": 74
+ },
+ "rugRectangle_SW": {
+  "w": 188,
+  "h": 134,
+  "ax": 117.5,
+  "ay": 134
+ },
+ "cabinetTelevision_NE": {
+  "w": 79,
+  "h": 79,
+  "ax": 18.0,
+  "ay": 79
+ },
+ "televisionModern_NE": {
+  "w": 55,
+  "h": 67,
+  "ax": 10.5,
+  "ay": 67
+ },
+ "loungeChair_SE": {
+  "w": 67,
+  "h": 77,
+  "ax": 29.0,
+  "ay": 77
+ },
+ "lampRoundFloor_SW": {
+  "w": 19,
+  "h": 76,
+  "ax": 8.5,
+  "ay": 76
+ },
+ "bedDouble_SE": {
+  "w": 157,
+  "h": 138,
+  "ax": 86.0,
+  "ay": 138
+ },
+ "cabinetBedDrawerTable_SE": {
+  "w": 37,
+  "h": 44,
+  "ax": 15.0,
+  "ay": 44
+ },
+ "rugRound_SE": {
+  "w": 99,
+  "h": 71,
+  "ax": 48.0,
+  "ay": 71
+ },
+ "bear_SE": {
+  "w": 38,
+  "h": 39,
+  "ax": 5.5,
+  "ay": 39
+ },
+ "bookcaseOpenLow_SE": {
+  "w": 50,
+  "h": 65,
+  "ax": 18.0,
+  "ay": 65
+ },
+ "pottedPlant_SE": {
+  "w": 21,
+  "h": 60,
+  "ax": 10.0,
+  "ay": 60
+ },
+ "kitchenFridge_SW": {
+  "w": 52,
+  "h": 105,
+  "ax": 33.0,
+  "ay": 105
+ },
+ "kitchenStove_SW": {
+  "w": 67,
+  "h": 79,
+  "ax": 35.0,
+  "ay": 79
+ },
+ "kitchenSink_SW": {
+  "w": 67,
+  "h": 79,
+  "ax": 35.0,
+  "ay": 79
+ },
+ "kitchenCabinet_SW": {
+  "w": 67,
+  "h": 79,
+  "ax": 35.0,
+  "ay": 79
+ },
+ "tableRound_SE": {
+  "w": 83,
+  "h": 69,
+  "ax": 40.0,
+  "ay": 69
+ },
+ "chair_NE": {
+  "w": 31,
+  "h": 49,
+  "ax": 14.0,
+  "ay": 49
+ },
+ "chair_SW": {
+  "w": 31,
+  "h": 57,
+  "ax": 14.5,
+  "ay": 57
+ },
+ "cardboardBoxClosed_SE": {
+  "w": 32,
+  "h": 39,
+  "ax": 15.0,
+  "ay": 39
+ },
+ "cardboardBoxOpen_SE": {
+  "w": 44,
+  "h": 48,
+  "ax": 21.0,
+  "ay": 48
+ },
+ "trashcan_SE": {
+  "w": 25,
+  "h": 46,
+  "ax": 15.5,
+  "ay": 46
+ }
+}

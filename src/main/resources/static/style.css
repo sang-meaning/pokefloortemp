@@ -54,10 +54,12 @@ html, body {
   width: 0; height: 0;
 }
 
-.furniture canvas {
+.furniture img {
   position: absolute;
-  image-rendering: pixelated;
+  pointer-events: none;   /* 가구 뒤에 있는 포켓몬도 클릭 가능하게 */
+  user-select: none;
 }
+body.pixel .furniture img { image-rendering: pixelated; }
 
 .mon { cursor: pointer; }
 .mon .shadow {
@@ -90,6 +92,7 @@ html, body {
   transition: opacity .15s;
   pointer-events: none;
 }
+.mon img.hires { image-rendering: auto; }
 .mon:hover .label, .mon.selected .label { opacity: 1; }
 
 /* 정보 패널 */
@@ -115,7 +118,7 @@ html, body {
   background: radial-gradient(circle at 50% 60%, #dfe9d4, #f7f4ea 70%);
   border-radius: 10px;
 }
-.info-sprite img { image-rendering: pixelated; transform: scale(2); }
+.info-sprite img { max-height: 110px; max-width: 100%; }
 .info-no { margin-top: 12px; color: #888; font-size: 13px; }
 #info h2 { margin: 2px 0 0; font-size: 22px; }
 .info-genus { color: #666; font-size: 13px; }

@@ -7,42 +7,92 @@
  *  - 깊이(앞뒤 순서) = x + y. 값이 클수록 관람자에게 가까움 → z-index 큼
  * ========================================================= */
 
-const TW = 64;          // 타일 가로 폭 (마름모)
-const TH = 32;          // 타일 세로 폭
-const WALL_H = 80;      // 바깥 벽 높이
-const RAIL_H = 12;      // 방 사이 유리 칸막이 높이
-const SLAB = 14;        // 바닥 두께
+/* Kenney Furniture Kit(CC0) 의 아이소메트릭 각도에 맞춤
+ * 원본 바닥 타일 151×110 px → 세로/가로 비율 0.728 */
+const KENNEY_TILE_W = 151;
+const TW = 96;                       // 타일 가로 폭 (마름모)
+const TH = 70;                       // 타일 세로 폭 (= TW × 0.728)
+// Kenney 바닥 1칸 = 약 2m → 우리 타일 2×2 칸에 해당하도록 2배
+const KS = (TW / KENNEY_TILE_W) * 2; // Kenney 이미지 배율
+const WALL_H = 140;                  // 바깥 벽 높이(여백 계산용)
+const RAIL_H = 14;                   // 방 사이 유리 칸막이 높이
+const SLAB = 16;                     // 바닥 두께
 const MARGIN = 40;
-const MON_SCALE = 1.0;  // 포켓몬 스프라이트 확대 배율
+const MON_SCALE = 1.5;               // 포켓몬 스프라이트 확대 배율
+// 그림 스타일: 기본 = 원본 Kenney 렌더(smooth), ?style=pixel 로 도트 변환판과 비교
+const PARAMS = new URLSearchParams(location.search);
+const STYLE = PARAMS.get('style') === 'pixel' ? 'pixel' : 'smooth';
+// 포켓몬 이미지: 기본 = 움직이는 GIF, ?mon=home 이면 고해상도 HOME 3D 렌더(정지 이미지 + 코드 애니메이션)
+const MON_MODE = PARAMS.get('mon') === 'home' ? 'home' : 'gif';
+const PX = 2;                        // 도트 1개 = 화면 2px (바닥·벽·가구 공통)
+const ASSET = STYLE === 'pixel' ? '/assets/kenney-pixel/' : '/assets/kenney/';
+const SPR = STYLE === 'pixel' ? PX : KS;   // manifest 좌표 → 화면 px 배율
 
 /* ---------- 방(박스) 정의: 나중에 DB에서 받아올 부분 ---------- */
 const ROOMS = [
-  { id: 'A', x: 0, y: 0, w: 8, h: 6, name: '풀숲 연구실', tile: ['#b7d39b', '#a9c98b'], wall: '#e9e4d4' },
-  { id: 'B', x: 8, y: 0, w: 7, h: 6, name: '휴게실',     tile: ['#e6d3b3', '#dcc7a3'], wall: '#efe6d6' },
-  { id: 'C', x: 0, y: 6, w: 8, h: 6, name: '수조실',     tile: ['#a9cfe0', '#9bc3d6'], wall: '#dde8ee' },
-  { id: 'D', x: 8, y: 6, w: 7, h: 6, name: '창고',       tile: ['#c3c6cc', '#b6b9c0'], wall: '#e1e2e6' },
+  { id: 'A', x: 0, y: 0, w: 7, h: 6, name: '연구실', tile: ['#d9c7a5', '#cfbb97'] },
+  { id: 'B', x: 7, y: 0, w: 7, h: 6, name: '거실',   tile: ['#b9d39f', '#adc992'] },
+  { id: 'C', x: 0, y: 6, w: 7, h: 6, name: '침실',   tile: ['#c9d6e8', '#bccbe0'] },
+  { id: 'D', x: 7, y: 6, w: 7, h: 6, name: '부엌',   tile: ['#e8e2d6', '#ddd5c6'] },
 ];
 
 // 방과 방 사이 문: 인접한 두 타일 사이를 통과 가능하게 함
 const DOORS = [
-  [[7, 2], [8, 2]], [[7, 3], [8, 3]],   // A ↔ B
-  [[3, 5], [3, 6]], [[4, 5], [4, 6]],   // A ↔ C
-  [[11, 5], [11, 6]],                   // B ↔ D
-  [[7, 8], [8, 8]], [[7, 9], [8, 9]],   // C ↔ D
+  [[6, 3], [7, 3]],     // A ↔ B
+  [[4, 5], [4, 6]],     // A ↔ C
+  [[12, 5], [12, 6]],   // B ↔ D
+  [[6, 9], [7, 9]],     // C ↔ D
 ];
 
-// 가구 자리표시(임시 박스). 나중에 Kenney PNG 로 교체
+// 바깥 벽 중 창문이 있는 칸 (벽 이미지 1장 = 타일 2칸, 시작 타일 번호로 지정)
+const WINDOWS = { north: [2, 10], west: [2, 8] };
+
+/* 가구 (Kenney Furniture Kit, CC0)
+ *  sprite : assets/kenney/ 의 파일명 (방향 _SE/_SW/_NE/_NW)
+ *  x, y   : 놓을 타일 (큰 가구는 이 타일에서 오른쪽/아래로 차지)
+ *  snap   : 'N' = 뒤쪽(북쪽) 벽에 붙이기, 'W' = 왼쪽(서쪽) 벽에 붙이기
+ *  flat   : 바닥 깔개(러그) → 위로 걸어다닐 수 있고 항상 맨 아래
+ *  lift   : 다른 가구 위에 올릴 때 높이(px, 원본 기준)
+ *  name   : 가구 이름 */
 const FURNITURE = [
-  { x: 1, y: 1, h: 34, color: '#7a5c3e', name: '책상' },
-  { x: 2, y: 1, h: 34, color: '#7a5c3e', name: '책상' },
-  { x: 6, y: 4, h: 22, color: '#4f8a3c', name: '화분' },
-  { x: 13, y: 1, h: 26, color: '#c0504d', name: '소파' },
-  { x: 13, y: 2, h: 26, color: '#c0504d', name: '소파' },
-  { x: 1, y: 9, h: 40, color: 'rgba(80,160,220,0.75)', name: '수조' },
-  { x: 2, y: 9, h: 40, color: 'rgba(80,160,220,0.75)', name: '수조' },
-  { x: 12, y: 9, h: 30, color: '#9c7b4f', name: '상자' },
-  { x: 13, y: 9, h: 46, color: '#8d6e45', name: '상자' },
-  { x: 13, y: 10, h: 30, color: '#9c7b4f', name: '상자' },
+  // A 연구실
+  { sprite: 'bookcaseOpen_SW',        x: 1,  y: 0, snap: 'N', name: '책장' },
+  { sprite: 'bookcaseClosedWide_SW',  x: 2,  y: 0, snap: 'N', name: '책장' },
+  { sprite: 'pottedPlant_SW',         x: 6,  y: 0, snap: 'N', name: '화분' },
+  { sprite: 'desk_SE',                x: 0,  y: 2, snap: 'W', name: '책상' },
+  { sprite: 'computerScreen_SE',      x: 0,  y: 2, snap: 'W', lift: 46, name: '모니터' },
+  { sprite: 'chairDesk_NW',           x: 2,  y: 2, name: '의자' },
+  { sprite: 'lampRoundFloor_SE',      x: 0,  y: 5, snap: 'W', name: '스탠드' },
+
+  // B 거실
+  { sprite: 'rugRectangle_SW',        x: 9,  y: 2, flat: true, name: '러그' },
+  { sprite: 'loungeSofa_SW',          x: 9,  y: 0, snap: 'N', name: '소파' },
+  { sprite: 'tableCoffee_SW',         x: 9,  y: 2, name: '커피 테이블' },
+  { sprite: 'cabinetTelevision_NE',   x: 9,  y: 4, name: 'TV 장' },
+  { sprite: 'televisionModern_NE',    x: 9,  y: 4, lift: 30, name: 'TV' },
+  { sprite: 'loungeChair_SE',         x: 7,  y: 1, name: '라운지 체어' },
+  { sprite: 'lampRoundFloor_SW',      x: 12, y: 0, snap: 'N', name: '스탠드' },
+  { sprite: 'pottedPlant_SW',         x: 13, y: 0, snap: 'N', name: '화분' },
+
+  // C 침실
+  { sprite: 'rugRound_SE',            x: 3,  y: 9, flat: true, name: '러그' },
+  { sprite: 'bedDouble_SE',           x: 0,  y: 7, snap: 'W', name: '침대' },
+  { sprite: 'cabinetBedDrawerTable_SE', x: 0, y: 6, snap: 'W', name: '협탁' },
+  { sprite: 'bookcaseOpenLow_SE',     x: 0,  y: 10, snap: 'W', name: '낮은 책장' },
+  { sprite: 'bear_SE',                x: 4,  y: 10, name: '곰인형' },
+  { sprite: 'pottedPlant_SE',         x: 6,  y: 11, name: '화분' },
+
+  // D 부엌 (뒤쪽 유리벽에 붙여서)
+  { sprite: 'kitchenFridge_SW',       x: 7,  y: 6, snap: 'N', name: '냉장고' },
+  { sprite: 'kitchenStove_SW',        x: 8,  y: 6, snap: 'N', name: '가스레인지' },
+  { sprite: 'kitchenSink_SW',         x: 9,  y: 6, snap: 'N', name: '싱크대' },
+  { sprite: 'kitchenCabinet_SW',      x: 10, y: 6, snap: 'N', name: '수납장' },
+  { sprite: 'tableRound_SE',          x: 9,  y: 9, name: '식탁' },
+  { sprite: 'chair_SW',               x: 9,  y: 8, name: '의자' },
+  { sprite: 'chair_NE',               x: 9,  y: 10, name: '의자' },
+  { sprite: 'cardboardBoxClosed_SE',  x: 13, y: 11, name: '상자' },
+  { sprite: 'cardboardBoxOpen_SE',    x: 12, y: 11, name: '상자' },
+  { sprite: 'trashcan_SE',            x: 13, y: 8, name: '휴지통' },
 ];
 
 /* ---------- 격자 계산 ---------- */
@@ -57,7 +107,7 @@ const iso = (x, y) => ({ sx: (x - y) * TW / 2 + OX, sy: (x + y) * TH / 2 + OY })
 const key = (x, y) => `${x},${y}`;
 
 const roomAt = (x, y) => ROOMS.find(r => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h);
-const blocked = new Set(FURNITURE.map(f => key(f.x, f.y)));
+const blocked = new Set(FURNITURE.filter(f => !f.flat).map(f => key(f.x, f.y)));
 const doorSet = new Set();
 DOORS.forEach(([a, b]) => {
   doorSet.add(`${key(...a)}|${key(...b)}`);
@@ -76,9 +126,20 @@ const isDoorEdge = (x1, y1, x2, y2) => doorSet.has(`${key(x1, y1)}|${key(x2, y2)
 
 /* ---------- 배경(바닥 + 벽) 그리기 ---------- */
 const floorCanvas = document.getElementById('floor');
-floorCanvas.width = STAGE_W;
-floorCanvas.height = STAGE_H;
 const ctx = floorCanvas.getContext('2d');
+if (STYLE === 'pixel') {
+  // 낮은 해상도로 그린 뒤 CSS로 확대 → 바닥/벽도 도트처럼 보임
+  floorCanvas.width = Math.ceil(STAGE_W / PX);
+  floorCanvas.height = Math.ceil(STAGE_H / PX);
+  ctx.setTransform(1 / PX, 0, 0, 1 / PX, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  document.body.classList.add('pixel');
+} else {
+  floorCanvas.width = STAGE_W;
+  floorCanvas.height = STAGE_H;
+}
+floorCanvas.style.width = `${STAGE_W}px`;
+floorCanvas.style.height = `${STAGE_H}px`;
 
 function poly(points, fill, stroke) {
   ctx.beginPath();
@@ -95,6 +156,27 @@ function shade(hex, amt) {
   const n = parseInt(hex.slice(1), 16);
   const c = s => Math.max(0, Math.min(255, ((n >> s) & 255) + amt));
   return `rgb(${c(16)},${c(8)},${c(0)})`;
+}
+
+/* ---------- Kenney 에셋 로드 ---------- */
+// manifest.json: 각 이미지의 크기와 "바닥 앞 꼭짓점"(가장 아래 픽셀) 위치(ax, ay)
+let MANIFEST = {};
+const IMG = {};
+
+async function loadAssets() {
+  MANIFEST = await (await fetch(`${ASSET}manifest.json`)).json();
+  await Promise.all(Object.keys(MANIFEST).map(name => new Promise(resolve => {
+    const im = new Image();
+    im.onload = im.onerror = resolve;
+    im.src = `${ASSET}${name}.png`;
+    IMG[name] = im;
+  })));
+}
+
+/** 이미지의 기준점(ax, ay)을 화면 좌표 p 에 맞춰 캔버스에 그림 */
+function drawSprite(name, p) {
+  const m = MANIFEST[name];
+  ctx.drawImage(IMG[name], p.sx - m.ax * SPR, p.sy - m.ay * SPR, m.w * SPR, m.h * SPR);
 }
 
 function drawBackground() {
@@ -124,35 +206,37 @@ function drawBackground() {
     }
   }
 
-  // 3) 벽: 각 방의 북쪽(y=r.y) / 서쪽(x=r.x) 변
+  // 3) 바깥 벽: Kenney 벽/창문 이미지 (먼 쪽부터 그림)
+  for (let i = 0; i < GRID_W; i += 2) {       // 북쪽 벽 (y = 0), 오른쪽 위
+    drawSprite(WINDOWS.north.includes(i) ? 'wallWindow_SW' : 'wall_SW', iso(i + 2, 0));
+  }
+  for (let j = 0; j < GRID_H; j += 2) {       // 서쪽 벽 (x = 0), 왼쪽 위
+    drawSprite(WINDOWS.west.includes(j) ? 'wallWindow_SE' : 'wall_SE', iso(0, j + 2));
+  }
+
+  // 4) 방 사이 유리 칸막이 (문 자리는 비움)
+  const glass = (a, b) => poly([a, b, up(b, RAIL_H), up(a, RAIL_H)],
+    'rgba(200,230,255,0.35)', 'rgba(255,255,255,0.7)');
   ROOMS.forEach(r => {
-    for (let x = r.x; x < r.x + r.w; x++) {
-      const outer = r.y === 0;
-      if (!outer && isDoorEdge(x, r.y - 1, x, r.y)) continue;
-      const a = iso(x, r.y), b = iso(x + 1, r.y);
-      const h = outer ? WALL_H : RAIL_H;
-      poly([a, b, up(b, h), up(a, h)],
-        outer ? shade(r.wall, -18) : 'rgba(200,230,255,0.35)',
-        outer ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.6)');
+    if (r.y > 0) {
+      for (let x = r.x; x < r.x + r.w; x++) {
+        if (!isDoorEdge(x, r.y - 1, x, r.y)) glass(iso(x, r.y), iso(x + 1, r.y));
+      }
     }
-    for (let y = r.y; y < r.y + r.h; y++) {
-      const outer = r.x === 0;
-      if (!outer && isDoorEdge(r.x - 1, y, r.x, y)) continue;
-      const a = iso(r.x, y), b = iso(r.x, y + 1);
-      const h = outer ? WALL_H : RAIL_H;
-      poly([a, b, up(b, h), up(a, h)],
-        outer ? r.wall : 'rgba(200,230,255,0.35)',
-        outer ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.6)');
+    if (r.x > 0) {
+      for (let y = r.y; y < r.y + r.h; y++) {
+        if (!isDoorEdge(r.x - 1, y, r.x, y)) glass(iso(r.x, y), iso(r.x, y + 1));
+      }
     }
   });
 
-  // 4) 방 이름 (바닥 안쪽 모서리)
-  ctx.font = 'bold 12px "Malgun Gothic", sans-serif';
+  // 5) 방 이름 (바닥 앞쪽 모서리)
+  ctx.font = 'bold 16px "Malgun Gothic", sans-serif';
   ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ROOMS.forEach(r => {
-    const p = iso(r.x + 1.1, r.y + 1.1);
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.fillText(r.name, p.sx, p.sy);
+    const p = iso(r.x + r.w - 0.6, r.y + r.h - 0.6);
+    ctx.fillText(r.name, p.sx, p.sy + 4);
   });
 }
 
@@ -168,33 +252,45 @@ function placeEntity(el, px, py) {
 }
 
 function createFurniture(f) {
+  const m = MANIFEST[f.sprite];
+  if (!m) { console.warn('에셋 없음', f.sprite); return; }
+
+  // 이미지 폭으로 물체의 바닥 크기(타일 단위)를 추정: 앞 꼭짓점 기준 왼쪽 = x축, 오른쪽 = y축
+  const perTile = (TW / 2) / SPR;             // 이미지에서 타일 1칸의 반폭(px)
+  const fw = Math.min(2, m.ax / perTile);
+  const fh = Math.min(2, (m.w - m.ax) / perTile);
+
+  // 기본은 타일 중앙, snap 이면 벽 쪽으로 붙임
+  let cx = f.x + 0.5, cy = f.y + 0.5;
+  if (f.snap === 'N') cy = f.y + fh / 2 + 0.03;
+  if (f.snap === 'W') cx = f.x + fw / 2 + 0.03;
+
+  // 큰 가구는 여러 칸 차지 → 겹치는 타일 모두 통행 불가
+  if (!f.flat) {
+    for (let ty = Math.floor(cy - fh / 2 + 0.15); ty <= Math.floor(cy + fh / 2 - 0.15); ty++) {
+      for (let tx = Math.floor(cx - fw / 2 + 0.15); tx <= Math.floor(cx + fw / 2 - 0.15); tx++) {
+        blocked.add(key(tx, ty));
+      }
+    }
+  }
+
+  const front = iso(cx + fw / 2, cy + fh / 2);   // 물체 바닥의 앞 꼭짓점
+  const lift = (f.lift || 0) * KS;
+
   const el = document.createElement('div');
   el.className = 'entity furniture';
-  el.title = f.name;
-  const cv = document.createElement('canvas');
-  cv.width = TW;
-  cv.height = TH + f.h;
-  cv.style.left = `${-TW / 2}px`;
-  cv.style.top = `${-TH / 2 - f.h}px`;
-  const c = cv.getContext('2d');
-  const P = (x, y) => ({ sx: x, sy: y });
-  const draw = (pts, fill) => {
-    c.beginPath();
-    pts.forEach((p, i) => (i ? c.lineTo(p.sx, p.sy) : c.moveTo(p.sx, p.sy)));
-    c.closePath();
-    c.fillStyle = fill; c.fill();
-    c.strokeStyle = 'rgba(0,0,0,0.15)'; c.stroke();
-  };
-  const ins = 6; // 타일보다 살짝 작게
-  const T = P(TW / 2, ins / 2), R = P(TW - ins, TH / 2), B = P(TW / 2, TH - ins / 2), L = P(ins, TH / 2);
-  const dn = p => P(p.sx, p.sy + f.h);
-  draw([L, B, dn(B), dn(L)], shade(f.color, -25));
-  draw([B, R, dn(R), dn(B)], shade(f.color, -45));
-  draw([T, R, B, L], shade(f.color, 15));
-  el.appendChild(cv);
+  el.style.left = `${front.sx}px`;
+  el.style.top = `${front.sy}px`;
+  el.style.zIndex = f.flat ? 1 : zIndexOf(cx + cy + (f.lift ? 0.01 : 0));
+
+  const img = document.createElement('img');
+  img.src = `${ASSET}${f.sprite}.png`;
+  img.alt = f.name;
+  img.style.left = `${-m.ax * SPR}px`;
+  img.style.top = `${-m.ay * SPR - lift}px`;
+  img.style.width = `${m.w * SPR}px`;
+  el.appendChild(img);
   entitiesEl.appendChild(el);
-  // 타일 중심 기준으로 배치 (중심 = x+0.5, y+0.5)
-  placeEntity(el, f.x + 0.5, f.y + 0.5);
 }
 
 /* ---------- 포켓몬 ---------- */
@@ -220,10 +316,21 @@ class Monster {
     this.img = this.el.querySelector('img');
     this.label = this.el.querySelector('.label');
     this.label.textContent = data.nameKo;
-    this.img.src = data.sprites.frontAnimated || data.sprites.frontStatic;
-    this.img.addEventListener('load', () => {
-      this.label.style.bottom = `${this.img.naturalHeight * MON_SCALE + 6}px`;
-    });
+    this.hires = MON_MODE === 'home' && !!data.sprites.home;
+    this.phase = Math.random() * 10;
+    if (this.hires) {
+      // 실제 키에 비례한 크기 (너무 작거나 크지 않게 제한)
+      this.drawH = Math.max(60, Math.min(150, 55 + data.heightM * 50));
+      this.img.classList.add('hires');
+      this.img.style.height = `${this.drawH}px`;
+      this.img.src = data.sprites.home;
+      this.label.style.bottom = `${this.drawH + 6}px`;
+    } else {
+      this.img.src = data.sprites.frontAnimated || data.sprites.frontStatic;
+      this.img.addEventListener('load', () => {
+        this.label.style.bottom = `${this.img.naturalHeight * MON_SCALE + 6}px`;
+      });
+    }
     this.el.addEventListener('click', e => {
       if (suppressClick) return;
       e.stopPropagation();
@@ -271,6 +378,7 @@ class Monster {
   faceToward(dx, dy) {
     const screenX = dx - dy;      // +면 화면 오른쪽
     const screenY = dx + dy;      // +면 화면 아래(관람자 쪽)
+    if (this.hires) return this.faceFlip(screenX);   // HOME 이미지는 앞모습만 있음
     const facing = screenY > 0 ? 'front' : screenY < 0 ? 'back' : this.facing;
     if (facing !== this.facing) {
       this.facing = facing;
@@ -286,7 +394,13 @@ class Monster {
     }
   }
 
+  faceFlip(screenX) {
+    // HOME 렌더는 왼쪽 아래를 보고 있음 → 오른쪽으로 갈 때 반전
+    if (screenX !== 0) this.flip = screenX > 0 ? -1 : 1;
+  }
+
   update(dt) {
+    this.phase += dt;
     if (this.state === 'idle') {
       this.timer -= dt;
       if (Math.random() < dt * 0.15) this.flip *= -1;   // 가끔 두리번
@@ -332,9 +446,18 @@ class Monster {
 
   render() {
     placeEntity(this.el, this.px, this.py);
-    const bob = this.state === 'walk' ? Math.abs(Math.sin(this.walkT * 9)) * 3 : 0;
-    this.img.style.transform =
-      `translate(-50%, ${-bob}px) scale(${this.flip * MON_SCALE}, ${MON_SCALE})`;
+    const walking = this.state === 'walk';
+    const bob = walking ? Math.abs(Math.sin(this.walkT * 9)) * (this.hires ? 5 : 3) : 0;
+    if (this.hires) {
+      // 정지 이미지라서 숨쉬기(살짝 늘었다 줄었다) + 걸을 때 통통 튀기 + 기울기로 생동감
+      const breathe = Math.sin(this.phase * 3) * 0.025;
+      const tilt = walking ? Math.sin(this.walkT * 9) * 4 : 0;
+      this.img.style.transform =
+        `translate(-50%, ${-bob}px) rotate(${tilt}deg) scale(${this.flip * (1 - breathe / 2)}, ${1 + breathe})`;
+    } else {
+      this.img.style.transform =
+        `translate(-50%, ${-bob}px) scale(${this.flip * MON_SCALE}, ${MON_SCALE})`;
+    }
   }
 }
 
@@ -352,7 +475,8 @@ function showInfo(mon) {
   if (selected) selected.el.classList.remove('selected');
   selected = mon;
   mon.el.classList.add('selected');
-  document.getElementById('info-img').src = d.sprites.frontAnimated || d.sprites.frontStatic;
+  document.getElementById('info-img').src =
+    d.sprites.officialArtwork || d.sprites.frontAnimated || d.sprites.frontStatic;
   document.getElementById('info-no').textContent = `No.${String(d.id).padStart(4, '0')}`;
   document.getElementById('info-name').textContent = d.nameKo;
   document.getElementById('info-genus').textContent = d.genusKo;
@@ -435,6 +559,7 @@ function randomFreeTile() {
 }
 
 async function main() {
+  await loadAssets();
   drawBackground();
   FURNITURE.forEach(createFurniture);
   fitView();
