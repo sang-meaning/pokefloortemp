@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>PokeFloor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <strong>PokeFloor</strong>
+    <span class="hint">포켓몬을 클릭해 보세요 · 마우스 휠로 확대/축소 · 드래그로 이동</span>
+  </header>
+
+  <main id="viewport">
+    <div id="stage">
+      <canvas id="floor"></canvas>
+      <div id="entities"></div>
+    </div>
+  </main>
+
+  <aside id="info" class="hidden">
+    <button id="info-close" aria-label="닫기">×</button>
+    <div class="info-sprite"><img id="info-img" alt=""></div>
+    <div class="info-no" id="info-no"></div>
+    <h2 id="info-name"></h2>
+    <div class="info-genus" id="info-genus"></div>
+    <div class="info-types" id="info-types"></div>
+    <dl class="info-stats">
+      <dt>키</dt><dd id="info-height"></dd>
+      <dt>몸무게</dt><dd id="info-weight"></dd>
+    </dl>
+    <p class="info-flavor" id="info-flavor"></p>
+  </aside>
+
+  <script src="/app.js"></script>
+</body>
+</html>
