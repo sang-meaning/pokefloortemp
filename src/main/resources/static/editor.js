@@ -34,11 +34,28 @@ const paletteTabs = {
 };
 
 /* ---------- 칸 계산 ---------- */
-/** 그 칸에 놓을 수 있는지 (ignore: 지금 옮기는 자기 자신) */
-function canPlaceAt(t, ignore) {
-  if (!t) return false;
-  return ![...props, ...placedItems].some(o => o !== ignore && o.boxId === t.box.id && o.x === t.lx && o.y === t.ly);
+/** t(가장 뒤 칸)부터 fw×fh 칸이 모두 같은 박스 안이고 비어 있는지 (ignore: 지금 옮기는 자기 자신) */
+function canPlaceAt(t, ignore, fw = 1, fh = 1) {
+  if (!t || t.lx + fw > N || t.ly + fh > N) return false;
+  const taken = new Set();
+  [...props, ...placedItems].forEach(o => { if (o !== ignore) cellsOf(o).forEach(c => taken.add(key(...c))); });
+  for (let dy = 0; dy < fh; dy++) for (let dx = 0; dx < fw; dx++) {
+    if (taken.has(key(t.wx + dx, t.wy + dy))) return false;
+  }
+  return true;
 }
+
+/** 큰 소품은 포인터가 차지 영역 가운데에 오도록 기준 칸(가장 뒤 칸)을 잡음 */
+function anchorAt(px, py, fw = 1, fh = 1) {
+  const wx = Math.round(px - fw / 2), wy = Math.round(py - fh / 2);
+  const t = tileInfo(wx, wy);
+  return t ? { ...t, wx, wy } : null;
+}
+function anchorAtClient(cx, cy, fw, fh) {
+  const p = clientToWorld(cx, cy);
+  return anchorAt(p.x, p.y, fw, fh);
+}
+const footOfObj = o => (o.key ? footOf(o.key) : [1, 1]);
 
 /* ---------- 미리보기(고스트) ---------- */
 function showGhost(t, ok) {
@@ -55,7 +72,7 @@ function showGhost(t, ok) {
   img.style.height = `${ed.tool.h}px`;
   ed.ghost.classList.toggle('hidden', !t);
   ed.ghost.classList.toggle('invalid', !ok);
-  if (t) placeEntity(ed.ghost, t.wx + 0.5, t.wy + 0.5);
+  if (t) placeFootprint(ed.ghost, t.wx, t.wy, ed.tool.fw || 1, ed.tool.fh || 1);
 }
 function hideGhost() {
   ed.ghost?.remove();
@@ -88,8 +105,8 @@ function editFlash(msg) { flash(msg); }
 
 /* ---------- 놓기 / 옮기기 / 지우기 ---------- */
 async function placeAt(t) {
-  if (!canPlaceAt(t)) { editFlash('이미 무언가 놓인 칸이에요'); return; }
   const tool = ed.tool;
+  if (!canPlaceAt(t, null, tool.fw || 1, tool.fh || 1)) { editFlash('여기에는 놓을 수 없어요'); return; }
   try {
     const created = await editKinds[tool.kind].create(tool, t.box.id, t.lx, t.ly);
     editKinds[tool.kind].render(created);
@@ -140,20 +157,23 @@ window.addEventListener('pointermove', e => {
     if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 4) return;
     d.moved = true;
     d.obj.el.classList.add('dragging-ent');
-    // 잡은 지점만큼 빼서 발 위치 기준으로 칸 계산 (반 칸 아래로 보정)
-    const t = tileAtClient(e.clientX - d.offX, e.clientY - d.offY - TH / 4 * zoom);
+    // 잡은 지점만큼 빼서 발 위치 → 차지 영역 가운데 → 기준 칸
+    const [fw, fh] = footOfObj(d.obj);
+    const feetY = e.clientY - d.offY - (fw + fh) / 2 * TH / 2 * 0.4 * zoom;
+    const c = clientToWorld(e.clientX - d.offX, feetY);
+    const t = anchorAt(c.x, c.y, fw, fh);
     d.target = t;
-    const ok = canPlaceAt(t, d.obj);
+    const ok = canPlaceAt(t, d.obj, fw, fh);
     d.obj.el.classList.toggle('invalid', !ok);
     if (t) {
-      placeEntity(d.obj.el, t.wx + 0.5, t.wy + 0.5);
+      placeFootprint(d.obj.el, t.wx, t.wy, fw, fh);
       d.obj.el.style.zIndex = 99999;
     }
     return;
   }
   if (ed.tool) {
-    const t = tileAtClient(e.clientX, e.clientY);
-    showGhost(t, canPlaceAt(t));
+    const t = anchorAtClient(e.clientX, e.clientY, ed.tool.fw || 1, ed.tool.fh || 1);
+    showGhost(t, canPlaceAt(t, null, ed.tool.fw || 1, ed.tool.fh || 1));
   }
 });
 
@@ -170,7 +190,7 @@ window.addEventListener('pointerup', async () => {
     return;
   }
   const t = d.target;
-  if (!t || !canPlaceAt(t, d.obj)) {     // 놓을 수 없는 곳 → 제자리로
+  if (!t || !canPlaceAt(t, d.obj, ...footOfObj(d.obj))) {     // 놓을 수 없는 곳 → 제자리로
     editKinds[d.kind].render(d.obj);
     if (t) editFlash('여기에는 놓을 수 없어요');
     return;
@@ -206,17 +226,27 @@ function renderPropPalette(onlyBiome) {
   document.getElementById('palette-sub').textContent = onlyBiome
     ? `${box.emoji} ${box.biomeName}에 어울리는 소품 ${list.length}개 · 다른 바이옴 소품도 '모든 소품'에서 쓸 수 있어요`
     : `소품 ${list.length}개 · 어느 박스에나 자유롭게 놓을 수 있어요`;
-  document.getElementById('palette-list').innerHTML = list.map(p => `
+  // 큰 소품을 앞에
+  list.sort((a, b) => ((b.fw || 1) * (b.fh || 1)) - ((a.fw || 1) * (a.fh || 1)));
+  document.getElementById('palette-list').innerHTML = list.map(p => {
+    const big = (p.fw || 1) * (p.fh || 1) > 1;
+    const sc = big ? 1.4 : 2;
+    return `
     <button class="pal-item" data-kind="prop" data-id="${p.key}" title="${escapeHtml(p.name)}">
-      <img src="/assets/px/${p.key}.png" alt="" style="width:${p.w * 2}px;height:${p.h * 2}px">
+      ${big ? `<em>${p.fw}×${p.fh}칸</em>` : ''}
+      <img src="/assets/px/${p.key}.png" alt="" style="width:${p.w * sc}px;height:${p.h * sc}px">
       <span>${escapeHtml(p.name)}</span>
-    </button>`).join('');
+    </button>`;
+  }).join('');
   if (ed.tool) setTool(ed.tool);
 }
 
 function propTool(key) {
   const p = PROP_INFO[key];
-  return { kind: 'prop', key, src: `/assets/px/${key}.png`, w: p.w * PROP_SCALE, h: p.h * PROP_SCALE, name: p.name };
+  return {
+    kind: 'prop', key, src: `/assets/px/${key}.png`, w: p.w * PROP_SCALE, h: p.h * PROP_SCALE, name: p.name,
+    fw: p.fw || 1, fh: p.fh || 1,
+  };
 }
 /** 팔레트 항목 → 도구. items.js 가 'item' 을 추가 */
 const toolFactories = { prop: el => propTool(el.dataset.id) };
@@ -268,7 +298,7 @@ function initEditor() {
   viewport.addEventListener('click', e => {
     if (!ed.on || suppressClick) return;
     if (ed.tool) {
-      placeAt(tileAtClient(e.clientX, e.clientY));
+      placeAt(anchorAtClient(e.clientX, e.clientY, ed.tool.fw || 1, ed.tool.fh || 1));
     } else {
       select(null, null);
     }

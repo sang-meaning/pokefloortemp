@@ -37,14 +37,16 @@ public class WorldService {
             new PropRequest(null, "tree_round", 0, 0),
             new PropRequest(null, "pine", 1, 0),
             new PropRequest(null, "tree_round", 0, 2),
-            new PropRequest(null, "bush", 10, 1),
+            new PropRequest(null, "bush", 11, 3),
             new PropRequest(null, "flower_red", 2, 9),
             new PropRequest(null, "flower_white", 8, 3),
             new PropRequest(null, "daisy", 7, 2),
             new PropRequest(null, "rock_brown_s", 9, 9),
             new PropRequest(null, "stump", 0, 11),
             new PropRequest(null, "bush_flower", 11, 6),
-            new PropRequest(null, "sign", 11, 8));
+            new PropRequest(null, "sign", 11, 8),
+            new PropRequest(null, "house_small", 9, 0),
+            new PropRequest(null, "grove", 0, 4));
 
     private final BoxRepository boxes;
     private final PropRepository props;
@@ -105,7 +107,7 @@ public class WorldService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "기존 박스 옆에만 붙일 수 있어요");
         }
         Box box = boxes.save(new Box(bx, by, biome, false));
-        scatterProps(box, 9);
+        scatterProps(box, 12);
         return BoxDto.from(box);
     }
 
@@ -147,18 +149,35 @@ public class WorldService {
         }
     }
 
+    /** 바이옴에 어울리는 소품을 가장자리 쪽에 흩뿌림 (큰 소품은 최대 2개, 가운데는 비워 둠) */
     private void scatterProps(Box box, int count) {
         List<String> keys = new ArrayList<>(catalog.keysFor(box.getBiome()));
         if (keys.isEmpty()) return;
         Set<Integer> used = new HashSet<>();
-        int placed = 0;
-        for (int tries = 0; placed < count && tries < 100; tries++) {
-            int x = random.nextInt(BOX_SIZE), y = random.nextInt(BOX_SIZE);
-            boolean nearCenter = x >= 3 && x <= BOX_SIZE - 4 && y >= 3 && y <= BOX_SIZE - 4;   // 가운데는 비워 둠
-            if (nearCenter || !used.add(y * BOX_SIZE + x)) continue;
-            props.save(new Prop(box.getId(), keys.get(random.nextInt(keys.size())), x, y));
+        int placed = 0, big = 0;
+        for (int tries = 0; placed < count && tries < 300; tries++) {
+            String key = keys.get(random.nextInt(keys.size()));
+            int[] fp = catalog.footprint(key);
+            boolean isBig = fp[0] * fp[1] > 1;
+            if (isBig && big >= 2) continue;
+            int x = random.nextInt(BOX_SIZE - fp[0] + 1), y = random.nextInt(BOX_SIZE - fp[1] + 1);
+            if (!areaFree(used, x, y, fp, true)) continue;
+            for (int dy = 0; dy < fp[1]; dy++) for (int dx = 0; dx < fp[0]; dx++) used.add((y + dy) * BOX_SIZE + x + dx);
+            props.save(new Prop(box.getId(), key, x, y));
             placed++;
+            if (isBig) big++;
         }
+    }
+
+    private static boolean areaFree(Set<Integer> used, int x, int y, int[] fp, boolean keepCenter) {
+        for (int dy = 0; dy < fp[1]; dy++) {
+            for (int dx = 0; dx < fp[0]; dx++) {
+                int tx = x + dx, ty = y + dy;
+                boolean center = tx >= 3 && tx <= BOX_SIZE - 4 && ty >= 3 && ty <= BOX_SIZE - 4;
+                if ((keepCenter && center) || used.contains(ty * BOX_SIZE + tx)) return false;
+            }
+        }
+        return true;
     }
 
     /* ---------- 소품 ---------- */
@@ -168,7 +187,7 @@ public class WorldService {
         if (req.key() == null || !catalog.exists(req.key())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "없는 소품이에요: " + req.key());
         }
-        int[] xy = checkTile(req.boxId(), req.x(), req.y(), null);
+        int[] xy = checkArea(req.boxId(), req.x(), req.y(), catalog.footprint(req.key()), null, null);
         return PropDto.from(props.save(new Prop(req.boxId(), req.key(), xy[0], xy[1])));
     }
 
@@ -178,7 +197,7 @@ public class WorldService {
         Prop p = props.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "없는 소품이에요"));
         Long boxId = req.boxId() != null ? req.boxId() : p.getBoxId();
-        int[] xy = checkTile(boxId, req.x(), req.y(), id);
+        int[] xy = checkArea(boxId, req.x(), req.y(), catalog.footprint(p.getPropKey()), id, null);
         p.moveTo(boxId, xy[0], xy[1]);
         return PropDto.from(p);
     }
@@ -197,7 +216,11 @@ public class WorldService {
         Set<Integer> set = new HashSet<>();
         props.findByBoxId(boxId).stream()
                 .filter(p -> !p.getId().equals(exceptPropId))
-                .forEach(p -> set.add(p.getY() * BOX_SIZE + p.getX()));
+                .forEach(p -> {
+                    int[] fp = catalog.footprint(p.getPropKey());   // 큰 소품은 여러 칸
+                    for (int dy = 0; dy < fp[1]; dy++)
+                        for (int dx = 0; dx < fp[0]; dx++) set.add((p.getY() + dy) * BOX_SIZE + p.getX() + dx);
+                });
         placedItems.findByBoxId(boxId).stream()
                 .filter(p -> !p.getId().equals(exceptItemId))
                 .forEach(p -> set.add(p.getY() * BOX_SIZE + p.getX()));
@@ -210,15 +233,25 @@ public class WorldService {
 
     /** 범위 안이고 비어 있는 타일인지 확인 → [x, y] */
     public int[] checkTile(Long boxId, Integer x, Integer y, Long exceptPropId, Long exceptItemId) {
+        return checkArea(boxId, x, y, new int[]{1, 1}, exceptPropId, exceptItemId);
+    }
+
+    /** (x, y) 부터 fp[0]×fp[1] 칸이 모두 박스 안이고 비어 있는지 확인 → [x, y] */
+    public int[] checkArea(Long boxId, Integer x, Integer y, int[] fp, Long exceptPropId, Long exceptItemId) {
         if (boxId == null || x == null || y == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "boxId, x, y 가 필요해요");
         }
         box(boxId);
-        if (x < 0 || y < 0 || x >= BOX_SIZE || y >= BOX_SIZE) {
+        if (x < 0 || y < 0 || x + fp[0] > BOX_SIZE || y + fp[1] > BOX_SIZE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "박스 밖이에요");
         }
-        if (blockedTiles(boxId, exceptPropId, exceptItemId).contains(y * BOX_SIZE + x)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 무언가 놓인 칸이에요");
+        Set<Integer> blocked = blockedTiles(boxId, exceptPropId, exceptItemId);
+        for (int dy = 0; dy < fp[1]; dy++) {
+            for (int dx = 0; dx < fp[0]; dx++) {
+                if (blocked.contains((y + dy) * BOX_SIZE + x + dx)) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 무언가 놓인 칸이에요");
+                }
+            }
         }
         return new int[]{x, y};
     }

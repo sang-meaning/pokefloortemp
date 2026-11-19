@@ -16,7 +16,8 @@ import java.util.Map;
 @Component
 public class PropCatalog {
 
-    public record Entry(String key, String name, List<String> biomes) {}
+    /** fw, fh = 바닥에서 차지하는 칸 수 (집·숲 같은 큰 소품은 2×2) */
+    public record Entry(String key, String name, List<String> biomes, int fw, int fh) {}
 
     private final Map<String, Entry> entries = new LinkedHashMap<>();
 
@@ -26,13 +27,24 @@ public class PropCatalog {
             for (JsonNode n : root) {
                 List<String> biomes = new ArrayList<>();
                 n.get("biomes").forEach(b -> biomes.add(b.asString()));
-                entries.put(n.get("key").asString(), new Entry(n.get("key").asString(), n.get("name").asString(), biomes));
+                entries.put(n.get("key").asString(), new Entry(n.get("key").asString(), n.get("name").asString(), biomes,
+                        n.path("fw").asInt(1), n.path("fh").asInt(1)));
             }
         }
     }
 
     public boolean exists(String key) {
         return entries.containsKey(key);
+    }
+
+    public Entry get(String key) {
+        return entries.get(key);
+    }
+
+    /** 칸 수 [fw, fh]. 모르는 key 면 1×1 */
+    public int[] footprint(String key) {
+        Entry e = entries.get(key);
+        return e == null ? new int[]{1, 1} : new int[]{e.fw(), e.fh()};
     }
 
     public List<String> keysFor(Biome biome) {

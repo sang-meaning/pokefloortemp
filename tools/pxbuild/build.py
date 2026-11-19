@@ -6,8 +6,28 @@ OUT = sys.argv[1] if len(sys.argv)>1 else '/tmp/props'
 os.makedirs(OUT, exist_ok=True)
 sheets = {'rl': Image.open(RL).convert('RGBA'), 'cv': Image.open(CV).convert('RGBA')}
 
+def cell(c):
+    if c is None: return None
+    flip = c[-1] == 'flip'
+    if flip: c = c[:-1]
+    im = crop((c[0], c[1])) if c[0] in ('tt','td') else crop((c[0], c[1], c[2], 1, 1))
+    return im.transpose(Image.FLIP_LEFT_RIGHT) if flip else im
+
 def crop(src):
     kind = src[0]
+    if kind == 'cluster':
+        parts = [(trim(cell(c)), dx) for c, dx in src[1]]
+        W = max(dx + p.width for p, dx in parts); H = max(p.height for p, dx in parts)
+        out = Image.new('RGBA', (W, H))
+        for p, dx in parts: out.alpha_composite(p, (dx, H - p.height))
+        return out
+    if kind == 'grid':
+        g = src[1]; out = Image.new('RGBA', (len(g[0])*16, len(g)*16))
+        for r,row in enumerate(g):
+            for c,cl in enumerate(row):
+                t = cell(cl)
+                if t is not None: out.alpha_composite(t, (c*16, r*16))
+        return out
     if kind in ('tt','td'):
         return Image.open((TT if kind=='tt' else TD).format(src[1])).convert('RGBA')
     _, c, r, w, h = src
@@ -50,6 +70,18 @@ def recolor(im, how):
                     nr,ng,nb = colorsys.hls_to_rgb(0.47, l*0.85, 0.3)
             elif how == 'sea':
                 nr,ng,nb = colorsys.hls_to_rgb((h+0.25)%1 if s>0.2 else 0.55, l, max(s,0.25))
+            elif how == 'dry':
+                woody = 0.03 < h < 0.13 and s > 0.25
+                nr,ng,nb = (r/255,g/255,b/255) if woody else colorsys.hls_to_rgb(0.12, l*0.95, 0.45)
+            elif how == 'emerald':
+                nr,ng,nb = colorsys.hls_to_rgb(0.38, l*0.95, 0.7)
+            elif how == 'aqua':
+                nr,ng,nb = colorsys.hls_to_rgb(0.5, min(0.85, l*1.05), 0.7)
+            elif how == 'snow_roof':
+                # 지붕(위쪽 2/3)만 눈 덮기
+                if y < im.height*0.62 and a > 0 and l > 0.15 and not (y < 2):
+                    nr,ng,nb = colorsys.hls_to_rgb(0.58, min(0.97, 0.72 + l*0.3), 0.3)
+                else: nr,ng,nb = r/255,g/255,b/255
             elif how == 'ghost':
                 nr,ng,nb = colorsys.hls_to_rgb(0.76, l*0.85, min(1, s*0.8+0.2))
             else:
@@ -57,20 +89,23 @@ def recolor(im, how):
             px[x,y] = (int(nr*255), int(ng*255), int(nb*255), a)
     return im
 
-images, meta = {}, []
-for key, name, biomes, src in SPECS:
+images, meta, fps = {}, [], {}
+for key, name, biomes, src, *opt in SPECS:
     images[key] = trim(crop(src)); meta.append((key, name, biomes))
+    fps[key] = (opt[0] if opt else {}).get('fp', (1, 1))
 for key, name, biomes, base, how in RECOLOR:
-    images[key] = recolor(images[base], how); meta.append((key, name, biomes))
+    images[key] = recolor(images[base], how); meta.append((key, name, biomes)); fps[key] = fps[base]
 
 manifest = []
 for key, name, biomes in meta:
     im = images[key]; im.save(f'{OUT}/{key}.png')
-    manifest.append({'key': key, 'name': name, 'biomes': biomes, 'w': im.width, 'h': im.height})
+    e = {'key': key, 'name': name, 'biomes': biomes, 'w': im.width, 'h': im.height}
+    if fps[key] != (1, 1): e['fw'], e['fh'] = fps[key]   # 바닥에서 차지하는 칸 수
+    manifest.append(e)
 json.dump(manifest, open(f'{OUT}/props.json','w'), ensure_ascii=False, indent=0)
 
 # 미리보기 시트
-S=4; cols=10; cw=34*S; ch=40*S
+S=3; cols=12; cw=50*S; ch=54*S
 sheet = Image.new('RGBA', (cols*cw, ((len(manifest)+cols-1)//cols)*ch), (110,150,95,255)); d=ImageDraw.Draw(sheet)
 for i,m in enumerate(manifest):
     im = images[m['key']].resize((m['w']*S, m['h']*S), Image.NEAREST)

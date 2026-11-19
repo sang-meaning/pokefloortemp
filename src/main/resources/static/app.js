@@ -238,6 +238,18 @@ function propWorld(p) {
   return b ? toWorld(b, p.x, p.y) : null;
 }
 
+/** 소품이 바닥에서 차지하는 칸 수 [fw, fh] (집·숲 같은 큰 소품은 2×2) */
+const footOf = key => [PROP_INFO[key]?.fw || 1, PROP_INFO[key]?.fh || 1];
+
+/**
+ * 여러 칸 소품의 기준점: 차지하는 칸들의 가운데(깊이 계산용) → 그림 아래쪽은 앞 꼭짓점 쪽으로 조금 내림.
+ * (wx, wy) = 차지하는 칸 중 가장 뒤(왼쪽 위) 칸
+ */
+function placeFootprint(el, wx, wy, fw, fh) {
+  placeEntity(el, wx + fw / 2, wy + fh / 2);
+  el.style.top = `${parseFloat(el.style.top) + (fw + fh) / 2 * TH / 2 * 0.4}px`;
+}
+
 /** 소품 요소를 만들거나 위치 갱신 */
 function renderProp(p) {
   const w = propWorld(p);
@@ -254,16 +266,25 @@ function renderProp(p) {
   img.alt = info.name;
   img.style.width = `${info.w * PROP_SCALE}px`;
   img.style.height = `${info.h * PROP_SCALE}px`;
-  placeEntity(p.el, w[0] + 0.5, w[1] + 0.5);
-  p.el.style.top = `${parseFloat(p.el.style.top) + 6}px`;   // 발이 타일 중심보다 살짝 앞
+  placeFootprint(p.el, w[0], w[1], ...footOf(p.key));
 }
 
 let placedItems = [];   // items.js 에서 채움
 let renderPlacedItem = () => {};
 
+/** 소품·아이템이 차지한 칸 목록 (월드 좌표) */
+function cellsOf(o) {
+  const w = propWorld(o);
+  if (!w) return [];
+  const [fw, fh] = o.key ? footOf(o.key) : [1, 1];
+  const out = [];
+  for (let dy = 0; dy < fh; dy++) for (let dx = 0; dx < fw; dx++) out.push([w[0] + dx, w[1] + dy]);
+  return out;
+}
+
 function rebuildBlocked() {
   blocked.clear();
-  [...props, ...placedItems].forEach(p => { const w = propWorld(p); if (w) blocked.add(key(...w)); });
+  [...props, ...placedItems].forEach(o => cellsOf(o).forEach(c => blocked.add(key(...c))));
 }
 
 function canStand(wx, wy) {
