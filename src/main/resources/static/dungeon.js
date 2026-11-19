@@ -48,7 +48,7 @@ async function renderStarter() {
       <img src="${p.sprites.frontAnimated || p.sprites.frontStatic}" alt="">
       <b>${escapeHtml(p.nameKo)}</b>
       <span>${typeChips(p.typesKo)}</span>
-      <small>${PATTERN_INFO[PATTERN[p.typesKo[0]]].name}</small>
+      <small>기술: ${skillChip(skillOf(p))}</small>
     </button>`).join('');
 }
 $('starter-list').addEventListener('click', async e => {
@@ -100,10 +100,13 @@ $('biome-pick').addEventListener('click', e => {
 });
 
 /** 지금 고른 바이옴의 보스·몬스터 타입에 대한 상성 요약 */
+/** 기술 이름표 (기술 타입 색) */
+const skillChip = sk => `<span class="skill-chip" style="--c:${TYPE_COLORS[sk.t] || '#888'}">${escapeHtml(sk.name)}</span>`;
+
 function matchup(o) {
   const b = state.today.options.find(x => x.id === state.biome);
   if (!b) return '';
-  const atk = o.pokemon.typesKo[0];
+  const atk = skillOf(o.pokemon).t;
   const vsBoss = Math.max(...b.bossTypes.map(t => typeMultiplier(atk, [t])));
   if (vsBoss > 1.05) return '<em class="good">보스에게 효과 굉장</em>';
   if (vsBoss < 0.95) return '<em class="bad">보스에게 약함</em>';
@@ -127,13 +130,13 @@ function renderParty() {
   if (!own.length) { $('party-list').innerHTML = ''; return; }
   $('party-list').innerHTML = [...own].sort((a, b) => b.stars - a.stars || a.pokemon.id - b.pokemon.id).map(o => {
     const c = combatOf(o), sp = spritesOf(o), on = state.party.includes(o.pokemon.id);
-    const pat = PATTERN_INFO[PATTERN[o.pokemon.typesKo[0]] || 'shot'];
+    const sk = skillOf(o.pokemon);
     const expPct = o.nextStarExp ? Math.round((o.exp - o.starExp) / (o.nextStarExp - o.starExp) * 100) : 100;
     return `<button class="pcard${on ? ' on' : ''}" data-id="${o.pokemon.id}">
       <img src="${sp.still || sp.front}" alt="">
       <div class="pc-body">
         <b>${sp.shiny ? '<span class="shiny-mark">✨</span>' : ''}${escapeHtml(o.nickname || o.pokemon.nameKo)} ${starsHtml(o.stars)}</b>
-        <div>${typeChips(o.pokemon.typesKo)} <small class="pat">${pat.name}</small> ${matchup(o)}</div>
+        <div>${typeChips(o.pokemon.typesKo)} ${skillChip(sk)} ${matchup(o)}</div>
         <div class="pc-stats">❤${c.hp} ⚔${c.atk} 🛡${c.def} 💨${c.spd} <small>별당 +${Math.round(c.growth * 100)}%</small></div>
         <div class="pc-exp"><i style="width:${expPct}%"></i></div>
       </div>
@@ -298,10 +301,10 @@ function hideBanner() { $('banner').classList.add('hidden'); $('banner').classLi
 
 function renderPartyHud() {
   $('party-hud').innerHTML = state.game.members.map(mb => `
-    <div class="ph" title="${escapeHtml(PATTERN_INFO[mb.pattern].name)}">
+    <div class="ph" title="${escapeHtml(mb.skill.name)}">
       <img src="${mb.sprites.still || mb.sprites.front}" alt="">
       <span>${starsHtml(mb.owned.stars)}</span>
-      <small style="color:${mb.color}">${PATTERN_INFO[mb.pattern].name}</small>
+      <small style="color:${mb.color}">${escapeHtml(mb.skill.name)}</small>
     </div>`).join('');
 }
 

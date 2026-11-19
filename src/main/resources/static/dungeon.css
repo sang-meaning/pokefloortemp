@@ -172,7 +172,7 @@
 .warn-sub .type-chip { font-size: 12px; padding: 1px 8px; border-radius: 999px; }
 
 /* 오버레이 (강화 고르기, 일시정지, 결과) */
-.overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(5,7,12,.62); backdrop-filter: blur(2px); }
+.overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(5,7,12,.7); }
 .pick-box { text-align: center; }
 .pick-box.small { background: #1d2230; border: 1px solid #3b4664; border-radius: 16px; padding: 24px 30px; display: flex; flex-direction: column; gap: 10px; }
 .pick-box h2 { font-size: 30px; margin: 0; color: #ffe680; text-shadow: 0 3px 0 #000; }
@@ -255,3 +255,6 @@
 .res-caught small { color: #8b95a8; }
 .res-actions { display: flex; gap: 8px; justify-content: center; }
 .topbar.hidden { display: none; }
+
+.skill-chip { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 6px; color: #fff;
+  background: color-mix(in srgb, var(--c) 35%, #1b1f2a); border: 1px solid var(--c); }

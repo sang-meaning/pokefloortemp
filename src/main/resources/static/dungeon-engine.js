@@ -15,22 +15,6 @@ const PICK_TIMES = [60, 120];  // 입장(0초)과 보스 직전은 따로
 const ELITE_TIMES = [30, 75, 100, 140, 165];
 const SWARM_TIMES = [50, 110, 160];
 
-/* ---------- 타입별 공격 방식 ---------- */
-const PATTERN = {
-  '노말': 'shot', '불꽃': 'fireball', '물': 'beam', '풀': 'orbit', '전기': 'chain', '얼음': 'spread',
-  '격투': 'melee', '독': 'cloud', '땅': 'quake', '비행': 'boomerang', '에스퍼': 'homing', '벌레': 'rapid',
-  '바위': 'meteor', '고스트': 'shadow', '드래곤': 'breath', '악': 'melee', '강철': 'orbit', '페어리': 'homing',
-};
-const PATTERN_INFO = {
-  shot: { cd: 0.55, name: '몸통박치기 탄' }, rapid: { cd: 0.28, name: '벌레의 야단법석' },
-  fireball: { cd: 1.1, name: '불꽃세례' }, beam: { cd: 1.05, name: '물대포' },
-  orbit: { cd: 0, name: '회전 방어' }, chain: { cd: 1.15, name: '10만볼트' },
-  spread: { cd: 1.0, name: '얼음뭉치' }, melee: { cd: 0.75, name: '연속 펀치' },
-  cloud: { cd: 1.6, name: '독가스' }, quake: { cd: 1.5, name: '지진' },
-  boomerang: { cd: 1.2, name: '회오리' }, homing: { cd: 0.9, name: '사이코 구슬' },
-  meteor: { cd: 1.35, name: '스톤샤워' }, shadow: { cd: 1.3, name: '섀도볼' }, breath: { cd: 1.5, name: '용의 숨결' },
-};
-
 /* ---------- 강화 (각각 조금씩, 최대 중첩 수 있음) ---------- */
 const UPGRADES = [
   { id: 'dmg', icon: '⚔', name: '공격력', desc: '모든 공격 피해 +10%', max: 3, apply: m => { m.dmg *= 1.10; } },
@@ -69,6 +53,7 @@ class DungeonGame {
     this.stacks = {};
     this.mods = { dmg: 1, rate: 1, area: 1, extra: 0, move: 1, leech: 0, magnet: 1, gold: 1, crit: 0.05, armor: 1, superEff: 1 };
     this.enemies = [];
+    this.targetsList = [];
     this.shots = [];       // 내 투사체
     this.fx = [];          // 빔·지진·장판·베기 같은 공격 판정
     this.ebullets = [];    // 보스 탄
@@ -105,11 +90,12 @@ class DungeonGame {
     this.trail = [];
     this.members = party.map((m, i) => {
       const types = m.owned.pokemon.typesKo;
-      const pattern = PATTERN[types[0]] || 'shot';
+      const skill = skillOf(m.owned.pokemon);     // 포켓몬 고유 기술 (dungeon-skills.js)
       const spd = m.combat.speed;
+      if (skill.armor) this.mods.armor *= 1 - skill.armor;
       return {
-        i, m, owned: m.owned, types, type: types[0], pattern,
-        color: typeColor(types[0]),
+        i, m, owned: m.owned, types, type: skill.t, pattern: skill.p, skill,
+        color: typeColor(skill.t),
         x: ARENA / 2, y: ARENA / 2, flip: 1, cd: 0.4 + i * 0.25,
         dmg: 8 + m.combat.attack * 0.12,
         cdMul: clamp(1.25 - spd / 250, 0.75, 1.15),
@@ -190,13 +176,32 @@ class DungeonGame {
   }
 
   resize() {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    // 도트 그림이라 화면 배율(레티나)을 따르지 않아도 됨 → 그리는 픽셀 수 1/4
+    const dpr = 1;
     this.cv.width = Math.floor(innerWidth * dpr);
     this.cv.height = Math.floor(innerHeight * dpr);
     this.cv.style.width = `${innerWidth}px`;
     this.cv.style.height = `${innerHeight}px`;
     this.dpr = dpr;
     this.scale = Math.min(innerWidth / 1150, innerHeight / 720) * dpr;
+    this.vignettes = {};
+  }
+
+  /** 화면 가장자리 어둡게 (크기·색별로 한 번만 그려 둠) */
+  vignette(color) {
+    const W = this.cv.width, H = this.cv.height, k = `${color}`;
+    if (!this.vignettes[k]) {
+      const c = document.createElement('canvas');
+      c.width = W; c.height = H;
+      const x = c.getContext('2d');
+      const g = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, color);
+      x.fillStyle = g;
+      x.fillRect(0, 0, W, H);
+      this.vignettes[k] = c;
+    }
+    return this.vignettes[k];
   }
 
   /* ---------- 진행 ---------- */
@@ -241,6 +246,7 @@ class DungeonGame {
     this.shake = Math.max(0, this.shake - raw * 30);
     this.flash = Math.max(0, this.flash - raw * 2.5);
 
+    this.refreshTargets();
     if (this.phase === 'play') {
       this.time += dt;
       this.timeline();
@@ -423,11 +429,11 @@ class DungeonGame {
     if (p.hp <= 0) this.die();
   }
 
-  heal(n) {
+  heal(n, quiet) {
     const p = this.player;
     const before = p.hp;
     p.hp = Math.min(p.maxHp, p.hp + n);
-    if (p.hp - before >= 1) this.text(p.x, p.y - 60, `+${Math.round(p.hp - before)}`, '#6dff8a', 14);
+    if (!quiet && p.hp - before >= 1) this.text(p.x, p.y - 60, `+${Math.round(p.hp - before)}`, '#6dff8a', 14);
   }
 
   usePotion(i) {
@@ -469,153 +475,96 @@ class DungeonGame {
       else if (Math.abs(mb.x - (mb.px ?? mb.x)) > 0.3) mb.flip = mb.x > mb.px ? -1 : 1;
       mb.px = mb.x;
       if (this.phase === 'dead' || this.phase === 'end' || this.phase === 'loading') return;
+      mb.hop = Math.max(0, (mb.hop || 0) - dt);
       if (mb.pattern === 'orbit') { this.orbit(mb, dt); return; }
       mb.cd -= dt * this.mods.rate;
       if (mb.cd <= 0) {
+        mb.lastCd = null;
         const fired = this.attack(mb);
-        mb.cd = fired ? PATTERN_INFO[mb.pattern].cd * mb.cdMul : 0.15;
+        const cd = mb.lastCd ?? mb.skill.cd ?? BASE_CD[mb.pattern] ?? 1;
+        mb.cd = fired ? cd * mb.cdMul : 0.15;
       }
     });
   }
 
-  targets() {
-    const list = this.enemies.filter(e => !e.dying);
-    if (this.boss && this.boss.state !== 'enter' && this.boss.hp > 0) list.push(this.boss);
-    return list;
+  /** 이번 프레임의 공격 대상 (살아 있는 몬스터 + 보스) - update 마다 한 번 계산 */
+  refreshTargets() {
+    const list = [];
+    for (const e of this.enemies) if (!e.dying && !e.dead && e.hp > 0) list.push(e);
+    if (this.boss && this.boss.state !== 'enter' && this.boss.state !== 'dead' && this.boss.hp > 0) list.push(this.boss);
+    this.targetsList = list;
   }
+
+  targets() { return this.targetsList; }
 
   nearest(from, range = 420, skip) {
     let best = null, bd = range * range;
-    this.targets().forEach(e => {
-      if (skip && skip.has(e)) return;
+    for (const e of this.targetsList) {
+      if (e.hp <= 0 || (skip && skip.has(e))) continue;
       const d = dist2(from, e);
       if (d < bd) { bd = d; best = e; }
-    });
+    }
     return best;
   }
 
-  attack(mb) {
-    const P = mb.pattern, m = this.mods, color = mb.color, type = mb.type;
-    const base = mb.dmg * m.dmg;
-    const tgt = this.nearest(mb, P === 'melee' ? 140 : P === 'quake' ? 160 : 440);
-    if (!tgt && P !== 'quake') return false;
-    if (P === 'quake' && !this.nearest(mb, 160 * m.area)) return false;
-    const ang = tgt ? Math.atan2(tgt.y - mb.y, tgt.x - mb.x) : 0;
-    const shot = (a, o) => this.shots.push({
-      x: mb.x, y: mb.y - 14, vx: Math.cos(a) * (o.speed || 460), vy: Math.sin(a) * (o.speed || 460),
-      r: o.r || 6, dmg: base * (o.mul || 1), type, color, life: o.life || 1.3, pierce: o.pierce || 1,
-      hit: new Map(), kind: o.kind || 'bolt', ...o,
+  colorOf(s) { return typeColor(s.t); }
+
+  /** 파티원 위치에서 투사체 발사 */
+  shot(mb, s, a, o) {
+    const speed = o.speed || 460;
+    this.shots.push({
+      x: mb.x, y: mb.y - 14, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
+      r: o.r || 6, dmg: mb.dmg * this.mods.dmg * (o.mul || 1), type: s.t, color: typeColor(s.t),
+      life: o.life || 1.3, pierce: o.pierce || 1, hit: new Map(), kind: o.kind || 'bolt', t0: this.clock, ...o,
     });
-    switch (P) {
-      case 'shot': {
-        const n = 1 + m.extra;
-        for (let i = 0; i < n; i++) shot(ang + (i - (n - 1) / 2) * 0.16, { mul: 1, r: 6 });
-        SFX.play('shoot', 90);
-        break;
-      }
-      case 'rapid': {
-        const n = 1 + m.extra;
-        for (let i = 0; i < n; i++) shot(ang + rand(-0.15, 0.15), { mul: 0.45, r: 4, speed: 560 });
-        SFX.play('shoot', 120);
-        break;
-      }
-      case 'fireball':
-        for (let i = 0; i <= m.extra; i++) shot(ang + (i - m.extra / 2) * 0.25, { mul: 1, r: 9, speed: 380, kind: 'fire', explode: 58 * m.area });
-        SFX.play('shoot', 90);
-        break;
-      case 'homing':
-        for (let i = 0; i <= m.extra; i++) shot(ang + rand(-0.6, 0.6), { mul: 0.9, r: 8, speed: 300, kind: 'orb', homing: 5, life: 2.2 });
-        break;
-      case 'shadow':
-        for (let i = 0; i <= m.extra; i++) shot(ang + (i - m.extra / 2) * 0.3, { mul: 1.2, r: 15 * Math.sqrt(m.area), speed: 230, kind: 'shadow', pierce: 99, life: 2.4, tick: 0.35 });
-        break;
-      case 'spread': {
-        const n = 3 + m.extra;
-        for (let i = 0; i < n; i++) shot(ang + (i - (n - 1) / 2) * 0.22, { mul: 0.7, r: 6, speed: 480, kind: 'ice', slow: 1.5 });
-        SFX.play('shoot', 90);
-        break;
-      }
-      case 'boomerang':
-        for (let i = 0; i <= m.extra; i++) shot(ang + (i - m.extra / 2) * 0.5, { mul: 0.8, r: 18 * m.area, speed: 420, kind: 'gust', pierce: 99, life: 1.6, back: 0.75, tick: 0.3 });
-        break;
-      case 'beam':
-        this.fx.push({ kind: 'beam', x: mb.x, y: mb.y - 12, a: ang, len: 330 * m.area, w: 16 * m.area, dmg: base * 1.1, type, color, life: 0.28, max: 0.28, hit: new Set(), mb });
-        SFX.play('zap', 120);
-        break;
-      case 'chain': {
-        const hit = new Set();
-        let from = { x: mb.x, y: mb.y - 14 }, cur = tgt;
-        const pts = [from];
-        for (let i = 0; i < 4 + m.extra && cur; i++) {
-          hit.add(cur);
-          pts.push({ x: cur.x, y: cur.y - 10 });
-          this.damage(cur, base * (i === 0 ? 1 : 0.75), type, { x: from.x, y: from.y });
-          from = cur;
-          cur = this.nearest(cur, 170 * m.area, hit);
-        }
-        this.fx.push({ kind: 'lightning', pts, color: '#fff27a', life: 0.18, max: 0.18 });
-        SFX.play('zap', 80);
-        break;
-      }
-      case 'melee':
-        this.fx.push({ kind: 'slash', x: mb.x, y: mb.y - 10, a: ang, r: 90 * m.area, dmg: base * 1.2, type, color, life: 0.2, max: 0.2, hit: new Set(), knock: 160 });
-        SFX.play('hit', 80);
-        break;
-      case 'cloud':
-        for (let i = 0; i <= m.extra; i++) {
-          const e = i === 0 ? tgt : pickOne(this.targets());
-          if (e) this.fx.push({ kind: 'cloud', x: e.x + rand(-20, 20), y: e.y + rand(-20, 20), r: 62 * m.area, dmg: base * 0.35, type, color, life: 3, max: 3, tick: 0, every: 0.45 });
-        }
-        break;
-      case 'quake':
-        this.fx.push({ kind: 'quake', x: mb.x, y: mb.y, r: 0, R: 150 * m.area, dmg: base * 1.1, type, color, life: 0.4, max: 0.4, hit: new Set(), knock: 120 });
-        this.shake = Math.max(this.shake, 3);
-        SFX.play('slam', 200);
-        break;
-      case 'meteor':
-        for (let i = 0; i <= m.extra; i++) {
-          const e = i === 0 ? tgt : pickOne(this.targets());
-          if (e) this.fx.push({ kind: 'meteor', x: e.x + rand(-15, 15), y: e.y + rand(-15, 15), r: 48 * m.area, dmg: base * 1.7, type, color, life: 0.55, max: 0.55, landed: false });
-        }
-        break;
-      case 'breath':
-        this.fx.push({ kind: 'breath', x: mb.x, y: mb.y - 12, a: ang, len: 210 * m.area, spread: 0.55, dmg: base * 0.5, type, color, life: 0.6, max: 0.6, tick: 0, every: 0.15, mb });
-        SFX.play('dash', 300);
-        break;
-      default:
-        return false;
-    }
-    return true;
+  }
+
+  addCloud(x, y, r, dmg, s) {
+    this.fx.push({ kind: 'cloud', x, y, r, dmg, type: s.t, color: typeColor(s.t), life: 3, max: 3, tick: 0, every: 0.45 });
+  }
+
+  part(kind, x, y, vx, vy, life, size, color) {
+    if (this.parts.length < 700) this.parts.push({ kind, x, y, vx, vy, life, max: life, size, color });
+  }
+
+  attack(mb) {
+    const s = mb.skill, P = s.p;
+    const self = ['aura', 'quake', 'wave', 'sing', 'selfdestruct', 'splash', 'heal'].includes(P);
+    const tgt = this.nearest(mb, P === 'melee' || P === 'whip' ? 150 : 440);
+    if (!tgt && !self) return false;
+    if (P === 'sing' && !this.nearest(mb, (s.R || 190) * this.mods.area)) return false;
+    const ang = tgt ? Math.atan2(tgt.y - mb.y, tgt.x - mb.x) : 0;
+    return CAST[P](this, mb, s, tgt, ang, mb.dmg * this.mods.dmg);
   }
 
   orbit(mb, dt) {
-    const n = 2 + this.mods.extra;
+    const s = mb.skill;
+    const n = (s.n || 2) + this.mods.extra;
     mb.angle += dt * 3.3;
-    const R = 72 * this.mods.area;
+    const R = (s.R || 72) * this.mods.area;
     mb.orbs = [];
     for (let i = 0; i < n; i++) {
       const a = mb.angle + i * Math.PI * 2 / n;
-      const o = { x: mb.x + Math.cos(a) * R, y: mb.y - 10 + Math.sin(a) * R * 0.8 };
+      const o = { x: mb.x + Math.cos(a) * R, y: mb.y - 10 + Math.sin(a) * R * 0.8, a };
       mb.orbs.push(o);
-      this.targets().forEach(e => {
-        if (dist2(o, e) < (e.r + 14) ** 2) {
-          e.orbHit = e.orbHit || new Map();
-          const last = e.orbHit.get(mb) || 0;
-          if (this.clock - last > 0.4) {
-            e.orbHit.set(mb, this.clock);
-            this.damage(e, mb.dmg * this.mods.dmg * 0.6, mb.type, mb);
-          }
+      for (const e of this.targetsList) {
+        if (dist2(o, e) > (e.r + 14) ** 2) continue;
+        e.orbHit = e.orbHit || new Map();
+        const last = e.orbHit.get(mb) || 0;
+        if (this.clock - last > 0.4) {
+          e.orbHit.set(mb, this.clock);
+          this.damage(e, mb.dmg * this.mods.dmg * (s.mul || 0.6), s.t, mb);
         }
-      });
+      }
     }
   }
 
   /** 피해: 상성·치명타·강화 반영, 숫자 표시, 넉백, 처치 처리 */
-  damage(e, amount, type, from, knock = 40) {
+  damage(e, amount, type, from, knock = 40, quiet = false) {
     if (e.hp <= 0 || e.dying) return;
     let mult = typeMultiplier(type, e.types);
     if (mult > 1) mult *= this.mods.superEff;
-    const crit = Math.random() < this.mods.crit;
+    const crit = Math.random() < this.mods.crit + (from?.crit || 0);
     const dmg = amount * mult * (crit ? 1.5 : 1) * (e.kind === 'boss' && e.state === 'enter' ? 0 : 1);
     if (dmg <= 0) return;
     e.hp -= dmg;
@@ -626,10 +575,15 @@ class DungeonGame {
       e.kx += Math.cos(a) * k; e.ky += Math.sin(a) * k;
     }
     const col = crit ? '#ffe34d' : mult > 1.05 ? '#ff9f43' : mult < 0.95 ? '#9aa4b8' : '#ffffff';
-    this.text(e.x + rand(-8, 8), e.y - e.r - 10, `${Math.round(dmg)}${crit ? '!' : ''}`, col, crit ? 17 : e.kind === 'boss' ? 15 : 12);
-    if (mult > 1.05 && Math.random() < 0.12) this.text(e.x, e.y - e.r - 28, '효과가 굉장했다!', '#ff9f43', 11);
-    this.burst(e.x, e.y - 10, typeColorHit(type), crit ? 8 : 4, 120);
-    SFX.play(e.kind === 'boss' ? 'hit' : 'hit', 60);
+    // 숫자는 너무 많으면 생략 (치명타·보스·큰 피해는 항상)
+    if (!quiet || crit || e.kind === 'boss') {
+      if (crit || e.kind !== 'mob' || this.texts.length < 28) {
+        this.text(e.x + rand(-8, 8), e.y - e.r - 10, `${Math.round(dmg)}${crit ? '!' : ''}`, col, crit ? 17 : e.kind === 'boss' ? 15 : 12);
+      }
+      if (mult > 1.05 && Math.random() < 0.08) this.text(e.x, e.y - e.r - 28, '효과가 굉장했다!', '#ff9f43', 11);
+      this.burst(e.x, e.y - 10, typeColorHit(type), crit ? 6 : 3, 120);
+      SFX.play('hit', 70);
+    }
     if (e.hp <= 0) this.kill(e);
   }
 
@@ -664,6 +618,12 @@ class DungeonGame {
         continue;
       }
       e.slow = Math.max(0, e.slow - dt);
+      if (e.sleep > 0) {   // 노래하기·최면술: 잠깐 잠듦
+        e.sleep -= dt;
+        e.x += e.kx * dt; e.y += e.ky * dt;
+        e.kx *= Math.pow(0.02, dt); e.ky *= Math.pow(0.02, dt);
+        continue;
+      }
       const spd = e.spd * (e.slow > 0 ? 0.55 : 1);
       const a = Math.atan2(p.y - e.y, p.x - e.x);
       e.x += (Math.cos(a) * spd + e.kx) * dt;
@@ -922,11 +882,13 @@ class DungeonGame {
       }
       s.x += s.vx * dt;
       s.y += s.vy * dt;
-      if (s.kind === 'fire' && Math.random() < 0.6) this.parts.push({ kind: 'puff', x: s.x, y: s.y, vx: rand(-20, 20), vy: rand(-40, -10), life: 0.35, max: 0.35, size: rand(3, 6), color: pickOne(['#ffb238', '#ff6a1a', '#ffe680']) });
-      if (s.kind === 'shadow' && Math.random() < 0.5) this.parts.push({ kind: 'puff', x: s.x + rand(-8, 8), y: s.y + rand(-8, 8), vx: 0, vy: -20, life: 0.4, max: 0.4, size: rand(3, 6), color: '#7a4fb8' });
+      if (s.wobble) { s.vx *= Math.pow(0.5, dt); s.vy *= Math.pow(0.5, dt); s.y += Math.sin((this.clock - s.t0) * 9) * 0.6; }
+      if (s.kind === 'fire' && Math.random() < 0.35) this.parts.push({ kind: 'puff', x: s.x, y: s.y, vx: rand(-20, 20), vy: rand(-40, -10), life: 0.35, max: 0.35, size: rand(3, 6), color: pickOne(['#ffb238', '#ff6a1a', '#ffe680']) });
+      if (s.kind === 'shadow' && Math.random() < 0.3) this.parts.push({ kind: 'puff', x: s.x + rand(-8, 8), y: s.y + rand(-8, 8), vx: 0, vy: -20, life: 0.4, max: 0.4, size: rand(3, 6), color: '#7a4fb8' });
       if (s.kind === 'gust') s.spin = (s.spin || 0) + dt * 14;
-      for (const e of this.targets()) {
+      for (const e of this.targetsList) {
         if (s.life <= 0) break;
+        if (e.hp <= 0) continue;
         if (dist2(s, e) > (e.r + s.r) ** 2) continue;
         const last = s.hit.get(e);
         if (last !== undefined && (!s.tick || this.clock - last < s.tick)) continue;
@@ -938,17 +900,18 @@ class DungeonGame {
         }
         this.damage(e, s.dmg, s.type, s);
         if (s.slow) e.slow = s.slow;
+        if (s.heal) this.heal(s.heal, true);
+        if (s.gold && Math.random() < s.gold) this.coins.push({ x: e.x, y: e.y, vx: rand(-80, 80), vy: rand(-140, -60), v: 1, t: 0 });
         if (--s.pierce <= 0) s.life = 0;
       }
     }
     this.shots = this.shots.filter(s => s.life > 0 && s.x > 0 && s.y > 0 && s.x < ARENA && s.y < ARENA);
   }
 
-  explode(x, y, r, dmg, type, color) {
-    this.targets().forEach(e => { if (dist2({ x, y }, e) < (r + e.r) ** 2) this.damage(e, dmg, type, { x, y }, 70); });
-    this.parts.push({ kind: 'ring', x, y, r: 6, R: r, life: 0.25, max: 0.25, color: '#ffe680', w: 5 });
-    this.burst(x, y, color, 14, 200);
-    this.burst(x, y, '#ffe680', 8, 140);
+  explode(x, y, r, dmg, type, color, loud) {
+    for (const e of this.targetsList) if (e.hp > 0 && dist2({ x, y }, e) < (r + e.r) ** 2) this.damage(e, dmg, type, { x, y }, 70);
+    this.parts.push({ kind: 'ring', x, y, r: 6, R: r, life: 0.25, max: 0.25, color: loud ? '#ffffff' : '#ffe680', w: 5 });
+    this.burst(x, y, color, loud ? 20 : 10, 200);
     SFX.play('explode', 160);
   }
 
@@ -967,21 +930,23 @@ class DungeonGame {
           return Math.abs(Math.atan2(side, along)) < f.spread + e.r / Math.max(30, along);
         };
         if (f.kind === 'beam') {
-          this.targets().forEach(e => { if (!f.hit.has(e) && hitTest(e)) { f.hit.add(e); this.damage(e, f.dmg, f.type, f); } });
+          for (const e of this.targetsList) {
+            if (e.hp > 0 && !f.hit.has(e) && hitTest(e)) { f.hit.add(e); this.damage(e, f.dmg, f.type, f); if (f.slow) e.slow = f.slow; }
+          }
         } else {
           f.tick -= dt;
           if (f.tick <= 0) {
             f.tick = f.every;
-            this.targets().forEach(e => { if (hitTest(e)) this.damage(e, f.dmg, f.type, f, 20); });
+            for (const e of this.targetsList) if (e.hp > 0 && hitTest(e)) this.damage(e, f.dmg, f.type, f, 20, true);
           }
-          for (let i = 0; i < 3; i++) {
+          for (let i = 0; i < 2; i++) {
             const a = f.a + rand(-f.spread, f.spread), r = rand(20, f.len);
-            this.parts.push({ kind: 'puff', x: f.x + Math.cos(a) * r, y: f.y + Math.sin(a) * r, vx: Math.cos(a) * 60, vy: Math.sin(a) * 60, life: 0.3, max: 0.3, size: rand(4, 9), color: pickOne([f.color, '#c4b5ff', '#ffffff']) });
+            if (this.parts.length < 700) this.parts.push({ kind: 'puff', x: f.x + Math.cos(a) * r, y: f.y + Math.sin(a) * r, vx: Math.cos(a) * 60, vy: Math.sin(a) * 60, life: 0.3, max: 0.3, size: rand(4, 9), color: pickOne([f.color, '#c4b5ff', '#ffffff']) });
           }
         }
       } else if (f.kind === 'slash') {
-        this.targets().forEach(e => {
-          if (f.hit.has(e) || dist2(f, e) > (f.r + e.r) ** 2) return;
+        this.targetsList.forEach(e => {
+          if (e.hp <= 0 || f.hit.has(e) || dist2(f, e) > (f.r + e.r) ** 2) return;
           let da = Math.atan2(e.y - f.y, e.x - f.x) - f.a;
           while (da > Math.PI) da -= Math.PI * 2;
           while (da < -Math.PI) da += Math.PI * 2;
@@ -989,23 +954,23 @@ class DungeonGame {
         });
       } else if (f.kind === 'quake') {
         f.r = f.R * prog;
-        this.targets().forEach(e => {
-          if (f.hit.has(e)) return;
+        for (const e of this.targetsList) {
+          if (e.hp <= 0 || f.hit.has(e)) continue;
           const d = Math.sqrt(dist2(f, e));
           if (d < f.r + e.r) { f.hit.add(e); this.damage(e, f.dmg, f.type, f, f.knock); }
-        });
-        if (Math.random() < 0.5) this.parts.push({ kind: 'rock', x: f.x + Math.cos(prog * 20) * f.r, y: f.y + Math.sin(prog * 20) * f.r, vx: rand(-30, 30), vy: rand(-120, -60), life: 0.4, max: 0.4, size: rand(3, 5), color: '#a07a4a' });
+        }
+        if (!f.ring && Math.random() < 0.4 && this.parts.length < 700) this.parts.push({ kind: 'rock', x: f.x + Math.cos(prog * 20) * f.r, y: f.y + Math.sin(prog * 20) * f.r, vx: rand(-30, 30), vy: rand(-120, -60), life: 0.4, max: 0.4, size: rand(3, 5), color: '#a07a4a' });
       } else if (f.kind === 'cloud') {
         f.tick -= dt;
         if (f.tick <= 0) {
           f.tick = f.every;
-          this.targets().forEach(e => { if (dist2(f, e) < (f.r + e.r) ** 2) this.damage(e, f.dmg, f.type, null); });
+          for (const e of this.targetsList) if (e.hp > 0 && dist2(f, e) < (f.r + e.r) ** 2) this.damage(e, f.dmg, f.type, null, 0, true);
         }
-        if (Math.random() < 0.4) this.parts.push({ kind: 'puff', x: f.x + rand(-f.r, f.r) * 0.8, y: f.y + rand(-f.r, f.r) * 0.5, vx: 0, vy: -15, life: 0.8, max: 0.8, size: rand(5, 10), color: pickOne(['#a64fd6', '#7d3aa8', '#c58bf0']) });
+        if (Math.random() < 0.25 && this.parts.length < 700) this.parts.push({ kind: 'puff', x: f.x + rand(-f.r, f.r) * 0.8, y: f.y + rand(-f.r, f.r) * 0.5, vx: 0, vy: -15, life: 0.8, max: 0.8, size: rand(5, 10), color: pickOne(['#a64fd6', '#7d3aa8', '#c58bf0']) });
       } else if (f.kind === 'meteor') {
         if (!f.landed && f.life <= 0.12) {
           f.landed = true;
-          this.targets().forEach(e => { if (dist2(f, e) < (f.r + e.r) ** 2) this.damage(e, f.dmg, f.type, f, 120); });
+          for (const e of this.targetsList) if (e.hp > 0 && dist2(f, e) < (f.r + e.r) ** 2) this.damage(e, f.dmg, f.type, f, 120);
           this.burst(f.x, f.y, '#b08d57', 18, 220);
           this.parts.push({ kind: 'ring', x: f.x, y: f.y, r: 5, R: f.r * 1.2, life: 0.25, max: 0.25, color: '#e8d4a8', w: 5 });
           this.shake = Math.max(this.shake, 4);
@@ -1013,6 +978,23 @@ class DungeonGame {
         }
       } else if (f.kind === 'purge') {
         f.r = 1600 * prog;
+      } else if (f.kind === 'whip') {
+        if (!f.done) {
+          f.done = true;
+          for (const e of this.targetsList) {
+            const dx = e.x - f.x, dy = e.y - f.y;
+            const along = dx * Math.cos(f.a) + dy * Math.sin(f.a), side = -dx * Math.sin(f.a) + dy * Math.cos(f.a);
+            if (along > 0 && along < f.len && Math.abs(side) < 18 + e.r) this.damage(e, f.dmg, f.type, f, 90);
+          }
+        }
+      } else if (f.kind === 'lob') {
+        if (f.life <= 0) {
+          const s = f.s;
+          if (s.cloud) this.addCloud(f.x1, f.y1, s.cloud * this.mods.area, f.dmg * 0.3, s);
+          this.explode(f.x1, f.y1, (s.explode || s.cloud || 50) * this.mods.area, f.dmg, s.t, f.color);
+        }
+      } else if (f.kind === 'charge' && f.mb) {
+        f.x = f.mb.x; f.y = f.mb.y - 14;
       }
     }
     this.fx = this.fx.filter(f => f.life > 0);
@@ -1078,16 +1060,17 @@ class DungeonGame {
 
   /* ---------- 파티클 ---------- */
   burst(x, y, color, n, speed, kind = 'spark') {
+    n = Math.min(n, 760 - this.parts.length);
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2, s = rand(speed * 0.3, speed);
       this.parts.push({ kind, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(0.25, 0.6), max: 0.6, size: rand(2, 4.5), color });
     }
-    if (this.parts.length > 1400) this.parts.splice(0, this.parts.length - 1400);
+    if (this.parts.length > 700) this.parts.splice(0, this.parts.length - 700);
   }
 
   text(x, y, s, color, size) {
     this.texts.push({ x, y, s, color, size, life: 0.75, max: 0.75 });
-    if (this.texts.length > 80) this.texts.shift();
+    if (this.texts.length > 45) this.texts.shift();
   }
 
   updateParticles(dt) {
@@ -1121,7 +1104,12 @@ class DungeonGame {
     c.setTransform(S, 0, 0, S, -this.cam.x * S, -this.cam.y * S);
     c.imageSmoothingEnabled = false;
 
-    c.drawImage(this.floor, 0, 0, ARENA, ARENA);
+    // 바닥은 보이는 부분만 잘라서 그림 (바닥 캔버스는 2px = 1칸)
+    {
+      const fx = clamp(this.cam.x, 0, ARENA), fy = clamp(this.cam.y, 0, ARENA);
+      const fw = Math.min(ARENA - fx, vw + 4), fh = Math.min(ARENA - fy, vh + 4);
+      if (fw > 0 && fh > 0) c.drawImage(this.floor, fx / 2, fy / 2, fw / 2, fh / 2, fx, fy, fw, fh);
+    }
     const inView = (x, y, m = 120) => x > this.cam.x - m && x < this.cam.x + vw + m && y > this.cam.y - m && y < this.cam.y + vh + m;
     this.decor.forEach(d => { if (inView(d.x, d.y)) c.drawImage(d.img, d.x - d.w / 2, d.y - d.h, d.w, d.h); });
 
@@ -1161,13 +1149,14 @@ class DungeonGame {
 
     // 화면 효과
     c.setTransform(1, 0, 0, 1, 0, 0);
-    const g = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
     const lowHp = this.player.hp / this.player.maxHp < 0.3 && this.phase !== 'end';
     const rage = this.boss && this.boss.phase2 && this.boss.state !== 'dead';
-    g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(1, lowHp ? `rgba(160,0,20,${0.45 + Math.sin(this.clock * 6) * 0.15})` : rage ? 'rgba(90,0,20,.45)' : 'rgba(0,0,0,.45)');
-    c.fillStyle = g;
-    c.fillRect(0, 0, W, H);
+    c.drawImage(this.vignette('rgba(0,0,0,.45)'), 0, 0);
+    if (lowHp || rage) {
+      c.globalAlpha = lowHp ? 0.55 + Math.sin(this.clock * 6) * 0.3 : 0.6;
+      c.drawImage(this.vignette('rgba(170,0,25,.7)'), 0, 0);
+      c.globalAlpha = 1;
+    }
     if (this.phase === 'warning') {
       c.fillStyle = `rgba(200,0,30,${0.18 + Math.sin(this.clock * 10) * 0.12})`;
       c.fillRect(0, 0, W, H);
@@ -1183,7 +1172,8 @@ class DungeonGame {
   }
 
   drawSprite(c, spr, x, y, scale, flip, t, opts = {}) {
-    const f = frameOf(spr, t, opts.speed || 1);
+    let f = frameOf(spr, t, opts.speed || 1);
+    if (f && opts.tint) f = tinted(f, opts.tint);
     if (!f) {
       c.fillStyle = opts.color || '#fff';
       c.beginPath(); c.arc(x, y - 16, 16 * scale, 0, 7); c.fill();
@@ -1193,15 +1183,13 @@ class DungeonGame {
     c.save();
     c.translate(x, y);
     c.scale(flip, 1);
-    if (opts.filter) c.filter = opts.filter;
     if (opts.alpha !== undefined) c.globalAlpha = opts.alpha;
     c.drawImage(f, -w / 2, -h + (opts.lift || 0), w, h);
     c.restore();
   }
 
   shadow(c, x, y, r) {
-    c.fillStyle = 'rgba(0,0,0,.28)';
-    c.beginPath(); c.ellipse(x, y, r, r * 0.38, 0, 0, 7); c.fill();
+    c.drawImage(SHADOW, x - r, y - r * 0.38, r * 2, r * 0.76);
   }
 
   drawMember(c, mb) {
@@ -1215,25 +1203,10 @@ class DungeonGame {
       c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 2;
       c.beginPath(); c.ellipse(mb.x, mb.y, 22, 8, 0, 0, 7); c.stroke();
     }
-    this.drawSprite(c, mb.spr, mb.x, mb.y - bob, 1, mb.flip, this.clock + mb.i, { alpha: blink ? 0.35 : 1, color: mb.color });
+    const hop = mb.hop > 0 ? Math.sin((0.45 - mb.hop) / 0.45 * Math.PI) * 40 : 0;
+    this.drawSprite(c, mb.spr, mb.x, mb.y - bob - hop, 1, mb.flip, this.clock + mb.i, { alpha: blink ? 0.35 : 1, color: mb.color });
     if (mb.sprites.shiny && Math.random() < 0.05) this.parts.push({ kind: 'star', x: mb.x + rand(-18, 18), y: mb.y - rand(10, 50), vx: 0, vy: -20, life: 0.5, max: 0.5, size: 3, color: '#ffe680' });
-    if (mb.orbs) {
-      c.save(); c.globalCompositeOperation = 'lighter';
-      mb.orbs.forEach(o => {
-        if (mb.type === '강철') {
-          c.fillStyle = '#c8d4e0';
-          c.save(); c.translate(o.x, o.y); c.rotate(this.clock * 8);
-          for (let k = 0; k < 6; k++) { c.rotate(Math.PI / 3); c.fillRect(-2, -11, 4, 6); }
-          c.beginPath(); c.arc(0, 0, 7, 0, 7); c.fill(); c.restore();
-        } else {
-          c.fillStyle = 'rgba(120,255,120,.35)'; c.beginPath(); c.arc(o.x, o.y, 14, 0, 7); c.fill();
-          c.save(); c.translate(o.x, o.y); c.rotate(this.clock * 10);
-          c.fillStyle = '#5fd35f'; c.beginPath(); c.ellipse(0, 0, 10, 4, 0, 0, 7); c.fill();
-          c.fillStyle = '#c9ffb0'; c.fillRect(-6, -1, 12, 2); c.restore();
-        }
-      });
-      c.restore();
-    }
+    if (mb.orbs) drawOrbs(c, mb, this.clock);
   }
 
   drawEnemy(c, e) {
@@ -1249,8 +1222,7 @@ class DungeonGame {
       g.addColorStop(1, 'rgba(0,0,0,0)');
       c.fillStyle = g; c.beginPath(); c.arc(e.x, e.y - 50 + lift, auraR * 1.6, 0, 7); c.fill();
       c.restore();
-      const filter = e.flash > 0 ? 'brightness(2.6)' : e.phase2 ? 'saturate(1.4) contrast(1.1)' : null;
-      this.drawSprite(c, e.spr, e.x, e.y + lift, e.scale, e.flip, t, { filter, speed: e.phase2 ? 1.6 : 1 });
+      this.drawSprite(c, e.spr, e.x, e.y + lift, e.scale, e.flip, t, { tint: e.flash > 0 ? 'white' : e.phase2 ? 'rage' : null, speed: e.phase2 ? 1.6 : 1 });
       if (e.shiny && Math.random() < 0.25) this.parts.push({ kind: 'star', x: e.x + rand(-60, 60), y: e.y - rand(20, 140), vx: 0, vy: -30, life: 0.6, max: 0.6, size: 4, color: '#ffe680' });
       return;
     }
@@ -1262,9 +1234,13 @@ class DungeonGame {
       c.fillStyle = `rgba(255,60,90,${0.18 + Math.sin(t * 6) * 0.08})`;
       c.beginPath(); c.arc(e.x, e.y - 30, 46, 0, 7); c.fill(); c.restore();
     }
-    const filter = e.flash > 0 ? 'brightness(3)' : e.slow > 0 ? 'hue-rotate(160deg) saturate(.6) brightness(1.2)' : null;
-    this.drawSprite(c, e.spr, e.x, e.y - bob, e.scale * (dying ? Math.max(0.1, e.dying) : 1), e.flip, t,
-      { filter, alpha: dying ? Math.max(0, e.dying) : 1, color: typeColor(e.types[0]) });
+    const tint = e.flash > 0 ? 'white' : e.slow > 0 ? 'ice' : null;
+    this.drawSprite(c, e.spr, e.x, e.y - (e.sleep > 0 ? 0 : bob), e.scale * (dying ? Math.max(0.1, e.dying) : 1), e.flip, e.sleep > 0 ? 0 : t,
+      { tint, alpha: dying ? Math.max(0, e.dying) : 1, color: typeColor(e.types[0]) });
+    if (e.sleep > 0) {
+      c.fillStyle = '#e8f0ff'; c.font = 'bold 12px monospace';
+      c.fillText('z', e.x + 10 + Math.sin(this.clock * 3) * 3, e.y - 40 - (this.clock * 20 % 14));
+    }
     if (e.shiny && Math.random() < 0.08) this.parts.push({ kind: 'star', x: e.x + rand(-14, 14), y: e.y - rand(10, 40), vx: 0, vy: -20, life: 0.5, max: 0.5, size: 3, color: '#ffe680' });
     if (e.kind === 'elite' && !dying) {
       const w = 50;
@@ -1304,9 +1280,9 @@ class DungeonGame {
         c.fillStyle = g; c.beginPath(); c.ellipse(f.x, f.y, f.r, f.r * 0.7, 0, 0, 7); c.fill(); c.restore();
       } else if (f.kind === 'quake') {
         c.save();
-        c.strokeStyle = `rgba(200,150,90,${k})`; c.lineWidth = 8 * k + 2;
+        c.strokeStyle = hexA(f.color || '#c8965a', k); c.lineWidth = 8 * k + 2;
         c.beginPath(); c.ellipse(f.x, f.y, f.r, f.r * 0.6, 0, 0, 7); c.stroke();
-        c.strokeStyle = `rgba(255,230,180,${k * 0.8})`; c.lineWidth = 2;
+        c.strokeStyle = `rgba(255,240,220,${k * 0.8})`; c.lineWidth = 2;
         c.beginPath(); c.ellipse(f.x, f.y, f.r * 0.85, f.r * 0.5, 0, 0, 7); c.stroke();
         c.restore();
       } else if (f.kind === 'meteor') {
@@ -1318,8 +1294,16 @@ class DungeonGame {
         c.beginPath(); c.ellipse(f.x, f.y, f.r * prog, f.r * 0.6 * prog, 0, 0, 7); c.fill();
         if (!f.landed) {
           const h = (1 - prog) * 380;
-          c.fillStyle = '#8a6a43'; c.fillRect(f.x - 9, f.y - h - 18, 18, 18);
-          c.fillStyle = '#c9a36b'; c.fillRect(f.x - 6, f.y - h - 18, 8, 6);
+          if (f.look === 'dig') {            // 구멍파기: 땅속에서 솟아오름
+            c.fillStyle = '#7a5530';
+            for (let i = 0; i < 5; i++) c.fillRect(f.x + rand(-f.r, f.r) * 0.6, f.y + rand(-6, 6), 5, 5);
+          } else if (f.look === 'dive') {    // 공중날기: 위에서 내리꽂음
+            c.fillStyle = 'rgba(255,255,255,.8)';
+            c.beginPath(); c.moveTo(f.x, f.y - h); c.lineTo(f.x - 14, f.y - h - 26); c.lineTo(f.x + 14, f.y - h - 26); c.fill();
+          } else {
+            c.fillStyle = '#8a6a43'; c.fillRect(f.x - 9, f.y - h - 18, 18, 18);
+            c.fillStyle = '#c9a36b'; c.fillRect(f.x - 6, f.y - h - 18, 8, 6);
+          }
         }
         c.restore();
       } else if (f.kind === 'purge') {
@@ -1364,59 +1348,8 @@ class DungeonGame {
   drawShots(c) {
     c.save();
     c.globalCompositeOperation = 'lighter';
-    this.shots.forEach(s => {
-      const glow = (r, col) => { c.fillStyle = col; c.beginPath(); c.arc(s.x, s.y, r, 0, 7); c.fill(); };
-      if (s.kind === 'fire') { glow(s.r * 2.4, 'rgba(255,120,30,.35)'); glow(s.r, '#ffb238'); glow(s.r * 0.5, '#fff3c0'); }
-      else if (s.kind === 'shadow') { glow(s.r * 1.8, 'rgba(110,60,180,.4)'); glow(s.r, '#4a2a7a'); glow(s.r * 0.45, '#c9a6ff'); }
-      else if (s.kind === 'orb') { glow(s.r * 2.2, hexA(s.color, 0.35)); glow(s.r, s.color); glow(s.r * 0.4, '#ffffff'); }
-      else if (s.kind === 'ice') {
-        c.save(); c.translate(s.x, s.y); c.rotate(Math.atan2(s.vy, s.vx));
-        c.fillStyle = 'rgba(150,230,255,.4)'; c.fillRect(-12, -5, 22, 10);
-        c.fillStyle = '#dff8ff'; c.beginPath(); c.moveTo(10, 0); c.lineTo(-8, -4); c.lineTo(-8, 4); c.fill(); c.restore();
-      } else if (s.kind === 'gust') {
-        c.save(); c.translate(s.x, s.y); c.rotate(s.spin || 0);
-        c.strokeStyle = 'rgba(200,235,255,.8)'; c.lineWidth = 3;
-        for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(0, 0, s.r * (0.4 + k * 0.25), k, k + 3.5); c.stroke(); }
-        c.restore();
-      } else {
-        c.save(); c.translate(s.x, s.y); c.rotate(Math.atan2(s.vy, s.vx));
-        c.fillStyle = hexA(s.color, 0.4); c.fillRect(-14, -s.r, 18, s.r * 2);
-        c.fillStyle = s.color; c.fillRect(-6, -s.r * 0.7, 12, s.r * 1.4);
-        c.fillStyle = '#ffffff'; c.fillRect(0, -1.5, 5, 3);
-        c.restore();
-      }
-    });
-    this.fx.forEach(f => {
-      const k = f.life / f.max;
-      if (f.kind === 'beam') {
-        c.save(); c.translate(f.x, f.y); c.rotate(f.a);
-        c.fillStyle = `rgba(60,150,255,${0.35 * k})`; c.fillRect(0, -f.w, f.len, f.w * 2);
-        c.fillStyle = `rgba(140,210,255,${0.9 * k})`; c.fillRect(0, -f.w / 2, f.len, f.w);
-        c.fillStyle = `rgba(255,255,255,${k})`; c.fillRect(0, -2, f.len, 4);
-        for (let i = 0; i < 5; i++) { c.fillStyle = `rgba(200,240,255,${k})`; c.fillRect(rand(0, f.len), rand(-f.w, f.w), 4, 4); }
-        c.restore();
-      } else if (f.kind === 'slash') {
-        c.save(); c.translate(f.x, f.y);
-        c.strokeStyle = hexA(f.type === '악' ? '#9a5cff' : '#ffcc66', k); c.lineWidth = 10 * k + 2;
-        c.beginPath(); c.arc(0, 0, f.r * (1.1 - k * 0.3), f.a - 1.1, f.a + 1.1); c.stroke();
-        c.strokeStyle = `rgba(255,255,255,${k})`; c.lineWidth = 2;
-        c.beginPath(); c.arc(0, 0, f.r * (1.05 - k * 0.3), f.a - 0.9, f.a + 0.9); c.stroke();
-        c.restore();
-      } else if (f.kind === 'lightning') {
-        c.strokeStyle = `rgba(255,250,150,${k})`; c.lineWidth = 3;
-        c.beginPath();
-        f.pts.forEach((pt, i) => {
-          if (i === 0) { c.moveTo(pt.x, pt.y); return; }
-          const prev = f.pts[i - 1];
-          for (let s = 1; s <= 4; s++) {
-            const tt = s / 4;
-            c.lineTo(prev.x + (pt.x - prev.x) * tt + (s < 4 ? rand(-10, 10) : 0), prev.y + (pt.y - prev.y) * tt + (s < 4 ? rand(-10, 10) : 0));
-          }
-        });
-        c.stroke();
-        c.strokeStyle = `rgba(255,255,255,${k})`; c.lineWidth = 1; c.stroke();
-      }
-    });
+    this.shots.forEach(sh => drawShot(c, sh, this.clock));
+    this.fx.forEach(f => drawFx(c, f, this.clock));
     c.restore();
   }
 
@@ -1437,7 +1370,7 @@ class DungeonGame {
       if (q.kind !== 'ghost') return;
       c.save();
       c.globalAlpha = Math.max(0, q.life / q.max) * 0.35;
-      this.drawSprite(c, this.bossSpr, q.x, q.y, this.boss?.scale || 2, q.flip, this.clock, { filter: 'brightness(2) saturate(0)' });
+      this.drawSprite(c, this.bossSpr, q.x, q.y, this.boss?.scale || 2, q.flip, this.clock, { tint: 'white' });
       c.restore();
     });
     c.save();
@@ -1466,10 +1399,13 @@ class DungeonGame {
   drawTexts(c) {
     c.save();
     c.textAlign = 'center';
+    c.lineJoin = 'round';
+    let lastSize = 0;
     this.texts.forEach(t => {
       const k = t.life / t.max;
       c.globalAlpha = Math.min(1, k * 2);
-      c.font = `900 ${t.size * (k > 0.8 ? 1.25 : 1)}px "Pretendard", "Malgun Gothic", monospace`;
+      const size = Math.round(t.size * (k > 0.8 ? 1.25 : 1));
+      if (size !== lastSize) { c.font = `900 ${size}px "Pretendard", "Malgun Gothic", monospace`; lastSize = size; }
       c.lineWidth = 3;
       c.strokeStyle = 'rgba(0,0,0,.85)';
       c.strokeText(t.s, t.x, t.y);

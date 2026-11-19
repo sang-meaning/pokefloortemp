@@ -83,13 +83,16 @@ const SFX = (() => {
     o.stop(t + dur + 0.02);
   }
 
+  let noiseBuf = null;   // 잡음은 한 번만 만들어 재사용
   function noise({ dur = 0.3, vol = 0.3, from = 2000, to = 200, delay = 0 }) {
     const a = ctx(), t = a.currentTime + delay;
-    const buf = a.createBuffer(1, Math.floor(a.sampleRate * dur), a.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    if (!noiseBuf) {
+      noiseBuf = a.createBuffer(1, Math.floor(a.sampleRate * 1.2), a.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
     const src = a.createBufferSource();
-    src.buffer = buf;
+    src.buffer = noiseBuf;
     const f = a.createBiquadFilter();
     f.type = 'lowpass';
     f.frequency.setValueAtTime(from, t);
@@ -98,7 +101,7 @@ const SFX = (() => {
     g.gain.setValueAtTime(vol, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     src.connect(f).connect(g).connect(master);
-    src.start(t);
+    src.start(t, 0, dur);
   }
 
   const sounds = {
