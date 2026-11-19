@@ -60,6 +60,22 @@ public class PokemonService {
         repository.deleteById(id);
     }
 
+    /** 종족값이 없는 포켓몬 번호 */
+    @Transactional(readOnly = true)
+    public List<Integer> idsWithoutStats() {
+        return repository.findAll().stream().filter(p -> !p.hasStats()).map(Pokemon::getId).toList();
+    }
+
+    @Transactional
+    public void fillStats(int id) {
+        repository.findById(id).ifPresent(fetcher::fillStats);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Pokemon> activeEntities() {
+        return repository.findByActiveTrueOrderByIdAsc();
+    }
+
     public long count() {
         return repository.count();
     }

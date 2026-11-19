@@ -7,6 +7,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -41,6 +42,26 @@ public class PokemonSeeder implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         if (service.count() == 0) startImport(from, to);
+        else Thread.ofVirtual().name("stats-backfill").start(this::backfillStats);
+    }
+
+    /** 예전 버전으로 받은 포켓몬에 종족값 채우기 */
+    private void backfillStats() {
+        List<Integer> ids = service.idsWithoutStats();
+        if (ids.isEmpty()) return;
+        log.info("종족값 없는 포켓몬 {}마리 보충 중...", ids.size());
+        try (ExecutorService pool = Executors.newFixedThreadPool(6)) {
+            for (int id : ids) {
+                pool.submit(() -> {
+                    for (int attempt = 1; attempt <= 3; attempt++) {
+                        try { service.fillStats(id); break; } catch (Exception e) {
+                            if (attempt == 3) log.warn("{}번 종족값 실패: {}", id, e.getMessage());
+                        }
+                    }
+                });
+            }
+        }
+        log.info("종족값 보충 끝");
     }
 
     /**

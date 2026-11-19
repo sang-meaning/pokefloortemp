@@ -26,10 +26,18 @@ public class AdminItemController {
 
     private final ItemService service;
     private final ItemSeeder seeder;
+    private final com.pokefloor.player.WalletService wallet;
 
-    public AdminItemController(ItemService service, ItemSeeder seeder) {
+    public AdminItemController(ItemService service, ItemSeeder seeder, com.pokefloor.player.WalletService wallet) {
         this.service = service;
         this.seeder = seeder;
+        this.wallet = wallet;
+    }
+
+    /** 개발용 골드 지급 (음수면 차감) */
+    @PostMapping("/gold")
+    public java.util.Map<String, Long> gold(@RequestParam long amount) {
+        return java.util.Map.of("gold", wallet.add(amount));
     }
 
     @GetMapping

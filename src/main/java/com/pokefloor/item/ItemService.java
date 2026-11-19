@@ -103,6 +103,36 @@ public class ItemService {
         placed.delete(p);
     }
 
+    /** 개수 (없으면 0) */
+    @Transactional(readOnly = true)
+    public int qty(int itemId) {
+        return inventory.findById(itemId).map(InventoryItem::getQty).orElse(0);
+    }
+
+    /** 하나 이상 빼기. 모자라면 409 */
+    @Transactional
+    public void consume(int itemId, int n) {
+        InventoryItem inv = inventory.findById(itemId).filter(i -> i.getQty() >= n)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "아이템이 모자라요"));
+        inv.add(-n);
+    }
+
+    @Transactional
+    public void give(int itemId, int n) {
+        inventory.findById(itemId).orElseGet(() -> inventory.save(new InventoryItem(itemId, 0))).add(n);
+    }
+
+    @Transactional(readOnly = true)
+    public Item byCode(String code) {
+        return items.findByCode(code)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "아이템 목록을 받는 중이에요. 잠시 후 다시"));
+    }
+
+    @Transactional(readOnly = true)
+    public Item byId(int id) {
+        return item(id);
+    }
+
     private Item item(Integer id) {
         if (id == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "itemId 가 필요해요");
         return items.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "없는 아이템이에요"));

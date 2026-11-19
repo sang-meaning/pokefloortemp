@@ -25,6 +25,13 @@ public class OwnedPokemon {
 
     private LocalDateTime obtainedAt;
 
+    /** 던전에서 얻은 경험치 (별 0~3개, Growth 참고) */
+    private Integer exp;
+
+    /** 이로치(색이 다른 모습)를 얻었는지, 박스에서 이로치 모습으로 보일지 */
+    private Boolean shiny;
+    private Boolean showShiny;
+
     /** 놓인 박스와 박스 안 타일(0~11). 인벤토리(미배치)면 모두 null */
     private Long boxId;
     private Integer tileX;
@@ -41,6 +48,18 @@ public class OwnedPokemon {
     public String getNickname() { return nickname; }
     public void setNickname(String nickname) { this.nickname = nickname; }
     public boolean isPlaced() { return placed; }
+    public int getExp() { return exp == null ? 0 : exp; }
+    /** 경험치 더하기 (최대치에서 멈춤) → 더해진 양 */
+    public int addExp(int n) {
+        int before = getExp();
+        this.exp = Math.min(Growth.maxExp(), before + Math.max(0, n));
+        return this.exp - before;
+    }
+    public boolean isShiny() { return Boolean.TRUE.equals(shiny); }
+    public void setShiny(boolean shiny) { this.shiny = shiny; }
+    public boolean isShowShiny() { return isShiny() && !Boolean.FALSE.equals(showShiny); }
+    public void setShowShiny(boolean showShiny) { this.showShiny = showShiny; }
+
     public Long getBoxId() { return boxId; }
     public Integer getTileX() { return tileX; }
     public Integer getTileY() { return tileY; }

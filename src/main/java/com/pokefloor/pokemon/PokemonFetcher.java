@@ -50,7 +50,24 @@ public class PokemonFetcher {
         pk.setFrontStatic(sprites.path("front_default").asString(null));
         pk.setHome(sprites.path("other").path("home").path("front_default").asString(null));
         pk.setOfficialArtwork(sprites.path("other").path("official-artwork").path("front_default").asString(null));
+        applyStats(pk, p);
         return pk;
+    }
+
+    /** /pokemon/{id} 응답의 stats 배열 → 종족값 */
+    public void applyStats(Pokemon pk, JsonNode p) {
+        int[] v = new int[6];
+        String[] names = {"hp", "attack", "defense", "special-attack", "special-defense", "speed"};
+        for (JsonNode st : p.path("stats")) {
+            String n = st.path("stat").path("name").asString();
+            for (int i = 0; i < names.length; i++) if (names[i].equals(n)) v[i] = st.path("base_stat").asInt();
+        }
+        pk.setStats(v[0], v[1], v[2], v[3], v[4], v[5]);
+    }
+
+    /** 종족값만 다시 받기 (예전 버전 DB 보충용) */
+    public void fillStats(Pokemon pk) {
+        applyStats(pk, client.getPokemon(pk.getId()));
     }
 
     /** names 배열에서 language=ko 항목의 name, 없으면 fallback */

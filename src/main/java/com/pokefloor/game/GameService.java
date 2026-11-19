@@ -99,7 +99,7 @@ public class GameService {
                     "클리어! 하지만 이번 판 포켓몬은 이미 모두 가지고 있어요");
         }
         int rewardId = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
-        OwnedDto reward = collectionService.acquire(rewardId);
+        OwnedDto reward = collectionService.acquire(rewardId, CollectionService.rollShiny());   // 4% 이로치
         return new GameDtos.FinishResponse(GameDtos.Result.WIN, elapsed, reward,
                 reward.pokemon().nameKo() + "을(를) 얻었어요!");
     }

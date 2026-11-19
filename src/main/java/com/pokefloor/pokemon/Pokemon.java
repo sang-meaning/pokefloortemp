@@ -39,6 +39,14 @@ public class Pokemon {
     /** false 면 게임·도감에서 제외 (관리자가 끌 수 있음) */
     private boolean active = true;
 
+    /** 종족값 (PokéAPI base_stat). 던전 전투 능력치 계산에 사용. 예전 데이터는 null → 시작 시 채움 */
+    private Integer statHp;
+    private Integer statAttack;
+    private Integer statDefense;
+    private Integer statSpAttack;
+    private Integer statSpDefense;
+    private Integer statSpeed;
+
     private LocalDateTime createdAt;
 
     protected Pokemon() {}
@@ -77,6 +85,28 @@ public class Pokemon {
     public void setHome(String home) { this.home = home; }
     public String getOfficialArtwork() { return officialArtwork; }
     public void setOfficialArtwork(String officialArtwork) { this.officialArtwork = officialArtwork; }
+    public Integer getStatHp() { return statHp; }
+    public Integer getStatAttack() { return statAttack; }
+    public Integer getStatDefense() { return statDefense; }
+    public Integer getStatSpAttack() { return statSpAttack; }
+    public Integer getStatSpDefense() { return statSpDefense; }
+    public Integer getStatSpeed() { return statSpeed; }
+    public boolean hasStats() { return statHp != null; }
+
+    public void setStats(int hp, int attack, int defense, int spAttack, int spDefense, int speed) {
+        this.statHp = hp;
+        this.statAttack = attack;
+        this.statDefense = defense;
+        this.statSpAttack = spAttack;
+        this.statSpDefense = spDefense;
+        this.statSpeed = speed;
+    }
+
+    /** 종족값 합계 (없으면 300) */
+    public int baseTotal() {
+        return hasStats() ? statHp + statAttack + statDefense + statSpAttack + statSpDefense + statSpeed : 300;
+    }
+
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
     public LocalDateTime getCreatedAt() { return createdAt; }

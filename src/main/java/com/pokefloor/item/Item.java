@@ -6,6 +6,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * 아이템 도감(카탈로그). PokéAPI 의 아이템 + 관동 배지.
@@ -27,7 +29,9 @@ public class Item {
     @Column(nullable = false, length = 60)
     private String nameKo;
 
+    /** 문자열 컬럼으로 저장 (DB enum 타입이면 분류를 추가할 때 깨짐) */
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20)
     private ItemKind kind;
 

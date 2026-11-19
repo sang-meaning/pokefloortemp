@@ -38,16 +38,81 @@ public class CollectionService {
         return repository.findAll().stream().map(OwnedPokemon::getPokemonId).collect(Collectors.toSet());
     }
 
-    /** 획득. 이미 가진 포켓몬이면 409 (모든 포켓몬은 최대 1번). 메인 박스 중앙(가까운 빈칸)에 나타남 */
-    @Transactional
+    /** 이로치 확률 4% (카드 게임 보상, 던전 몬스터·보스) */
+    public static final double SHINY_RATE = 0.04;
+
+    public static boolean rollShiny() {
+        return java.util.concurrent.ThreadLocalRandom.current().nextDouble() < SHINY_RATE;
+    }
+
     public OwnedDto acquire(int pokemonId) {
-        if (repository.existsById(pokemonId)) {
+        return acquire(pokemonId, false);
+    }
+
+    /**
+     * 획득. 메인 박스 중앙(가까운 빈칸)에 나타남.
+     * 모든 포켓몬은 최대 1번. 단, 이미 가진 포켓몬의 이로치를 처음 얻으면 이로치 수집으로 기록.
+     */
+    @Transactional
+    public OwnedDto acquire(int pokemonId, boolean shiny) {
+        OwnedPokemon existing = repository.findById(pokemonId).orElse(null);
+        if (existing != null) {
+            if (shiny && !existing.isShiny()) {
+                existing.setShiny(true);
+                existing.setShowShiny(true);
+                return toDto(existing);
+            }
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 획득한 포켓몬이에요");
         }
         pokemonService.get(pokemonId);   // 등록된 포켓몬인지 확인
-        OwnedPokemon o = repository.save(new OwnedPokemon(pokemonId));
+        OwnedPokemon o = new OwnedPokemon(pokemonId);
+        if (shiny) { o.setShiny(true); o.setShowShiny(true); }
+        o = repository.save(o);
         placeInMain(o);
         return toDto(o);
+    }
+
+    /** 잡을 수 있는지: 처음 보는 포켓몬이거나, 아직 없는 이로치 */
+    @Transactional(readOnly = true)
+    public boolean canAcquire(int pokemonId, boolean shiny) {
+        return repository.findById(pokemonId).map(o -> shiny && !o.isShiny()).orElse(true);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isOwned(int pokemonId) {
+        return repository.existsById(pokemonId);
+    }
+
+    /** 스타터: 포켓몬이 하나도 없을 때 이상해씨·파이리·꼬부기 중 하나 */
+    @Transactional
+    public OwnedDto starter(int pokemonId) {
+        if (repository.count() > 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 포켓몬이 있어요");
+        if (pokemonId != 1 && pokemonId != 4 && pokemonId != 7) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이상해씨·파이리·꼬부기 중에서 골라요");
+        }
+        return acquire(pokemonId, false);
+    }
+
+    /** 경험치 더하기 → [이전 경험치, 이후 경험치] */
+    @Transactional
+    public int[] addExp(int pokemonId, int n) {
+        OwnedPokemon o = find(pokemonId);
+        int before = o.getExp();
+        o.addExp(n);
+        return new int[]{before, o.getExp()};
+    }
+
+    @Transactional
+    public OwnedDto setShowShiny(int pokemonId, boolean show) {
+        OwnedPokemon o = find(pokemonId);
+        if (!o.isShiny()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이로치를 아직 얻지 못했어요");
+        o.setShowShiny(show);
+        return toDto(o);
+    }
+
+    @Transactional(readOnly = true)
+    public OwnedPokemon entity(int pokemonId) {
+        return find(pokemonId);
     }
 
     private void placeInMain(OwnedPokemon o) {
@@ -90,13 +155,17 @@ public class CollectionService {
         if (repository.existsById(pokemonId)) repository.deleteById(pokemonId);
     }
 
-    private OwnedPokemon find(int pokemonId) {
+    OwnedPokemon find(int pokemonId) {
         return repository.findById(pokemonId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "획득하지 않은 포켓몬이에요"));
     }
 
-    private OwnedDto toDto(OwnedPokemon o) {
+    public OwnedDto toDto(OwnedPokemon o) {
         PokemonDto p = pokemonService.get(o.getPokemonId());
-        return new OwnedDto(p, o.getNickname(), o.isPlaced(), o.getBoxId(), o.getTileX(), o.getTileY(), o.getObtainedAt());
+        int exp = o.getExp();
+        int stars = Growth.stars(exp);
+        return new OwnedDto(p, o.getNickname(), o.isPlaced(), o.getBoxId(), o.getTileX(), o.getTileY(),
+                exp, stars, Growth.nextStarExp(exp), Growth.STAR_EXP[stars], o.isShiny(), o.isShowShiny(),
+                o.getObtainedAt());
     }
 }

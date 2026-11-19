@@ -9,6 +9,7 @@ public enum ItemKind {
     HEALING("회복약", List.of("healing")),
     BERRY("나무열매", List.of("medicine")),
     HELD("지닌 물건", List.of("held-items")),
+    TOOL("도구", List.of()),
     BADGE("배지", List.of());
 
     private final String nameKo;

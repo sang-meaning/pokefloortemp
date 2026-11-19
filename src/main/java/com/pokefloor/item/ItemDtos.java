@@ -6,7 +6,7 @@ public final class ItemDtos {
     private ItemDtos() {}
 
     public record ItemDto(Integer id, String code, String nameKo, String kind, String kindName, String sprite) {
-        static ItemDto from(Item i) {
+        public static ItemDto from(Item i) {
             return new ItemDto(i.getId(), i.getCode(), i.getNameKo(), i.getKind().name(), i.getKind().nameKo(), i.getSprite());
         }
     }

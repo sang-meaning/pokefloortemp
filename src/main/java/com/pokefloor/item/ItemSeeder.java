@@ -48,6 +48,19 @@ public class ItemSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         seedBadges();
         if (repository.countByKindNot(ItemKind.BADGE) == 0) startImport();
+        else Thread.ofVirtual().name("shop-items").start(this::ensureShopItems);
+    }
+
+    /** 상점에서 파는 아이템이 카탈로그에 없으면 받아 옴 (이상한사탕, X공격 등은 위 분류에 없음) */
+    public void ensureShopItems() {
+        for (ShopItems.Entry e : ShopItems.ALL) {
+            if (repository.existsByCode(e.code())) continue;
+            for (int attempt = 1; attempt <= 3; attempt++) {
+                try { importOne(e.code(), e.kind()); break; } catch (Exception ex) {
+                    if (attempt == 3) log.warn("상점 아이템 {} 받기 실패: {}", e.code(), ex.getMessage());
+                }
+            }
+        }
     }
 
     private void seedBadges() {
@@ -106,6 +119,7 @@ public class ItemSeeder implements ApplicationRunner {
                 pool.shutdown();
                 pool.awaitTermination(30, TimeUnit.MINUTES);
             }
+            ensureShopItems();
             log.info("아이템 받기 끝: {}개 저장", repository.count());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
