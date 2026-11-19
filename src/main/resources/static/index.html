@@ -34,6 +34,19 @@
     <div id="bag-list"></div>
   </aside>
 
+  <!-- 꾸미기 모드 -->
+  <aside id="palette" class="hidden">
+    <div class="bag-head"><strong>🛠 꾸미기</strong></div>
+    <div id="palette-tabs" class="pal-tabs"></div>
+    <p class="bag-sub" id="palette-sub"></p>
+    <div id="palette-list" class="pal-list"></div>
+  </aside>
+  <div id="edit-toolbar" class="edit-toolbar hidden">
+    <span class="et-name"></span>
+    <button id="et-delete" class="btn small danger" title="Delete">🗑 삭제</button>
+    <button id="et-done" class="btn small">완료</button>
+  </div>
+
   <!-- 박스 추가 -->
   <div id="box-modal" class="modal hidden">
     <div class="modal-card">
@@ -78,5 +91,6 @@
   <script src="/common.js"></script>
   <script src="/app.js"></script>
   <script src="/room.js"></script>
+  <script src="/editor.js"></script>
 </body>
 </html>

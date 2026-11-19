@@ -606,6 +606,7 @@ async function loadWorld() {
   boxes = w.boxes;
   props = w.props;
   rebuildWorld();
+  if (typeof attachEditHandlers === 'function') props.forEach(p => attachEditHandlers('prop', p));
 }
 
 /** 박스가 늘거나 줄었을 때: 화면 크기·바닥·모든 엔티티 위치를 다시 계산. 보던 화면은 그 자리 유지 */
