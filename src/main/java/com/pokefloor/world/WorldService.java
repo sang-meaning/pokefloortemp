@@ -2,6 +2,10 @@ package com.pokefloor.world;
 
 import com.pokefloor.collection.OwnedPokemon;
 import com.pokefloor.collection.OwnedPokemonRepository;
+import com.pokefloor.item.InventoryItem;
+import com.pokefloor.item.InventoryItemRepository;
+import com.pokefloor.item.PlacedItem;
+import com.pokefloor.item.PlacedItemRepository;
 import com.pokefloor.world.WorldDtos.BoxDto;
 import com.pokefloor.world.WorldDtos.DeleteBoxResult;
 import com.pokefloor.world.WorldDtos.PropDto;
@@ -13,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -44,13 +47,18 @@ public class WorldService {
     private final PropRepository props;
     private final PropCatalog catalog;
     private final OwnedPokemonRepository owned;
+    private final PlacedItemRepository placedItems;
+    private final InventoryItemRepository inventory;
     private final Random random = new Random();
 
-    public WorldService(BoxRepository boxes, PropRepository props, PropCatalog catalog, OwnedPokemonRepository owned) {
+    public WorldService(BoxRepository boxes, PropRepository props, PropCatalog catalog, OwnedPokemonRepository owned,
+                        PlacedItemRepository placedItems, InventoryItemRepository inventory) {
         this.boxes = boxes;
         this.props = props;
         this.catalog = catalog;
         this.owned = owned;
+        this.placedItems = placedItems;
+        this.inventory = inventory;
     }
 
     /* ---------- 조회 ---------- */
@@ -100,7 +108,7 @@ public class WorldService {
 
     /**
      * 박스 삭제 (메인은 불가).
-     * 소품은 자유롭게 놓는 것이라 함께 삭제, 포켓몬은 인벤토리로(미배치) 돌려보냄.
+     * 소품은 자유롭게 놓는 것이라 함께 삭제, 포켓몬·아이템(몬스터볼, 배지 등)은 인벤토리로 돌려보냄.
      */
     @Transactional
     public DeleteBoxResult deleteBox(Long id) {
@@ -116,9 +124,16 @@ public class WorldService {
         return new DeleteBoxResult(mons.size(), items, deleted);
     }
 
-    /** 박스에 놓인 아이템을 인벤토리로 돌려보냄 (아이템 기능에서 확장) */
-    protected int returnItemsOf(Long boxId) {
-        return 0;
+    /** 박스에 놓인 아이템을 인벤토리로 돌려보냄 (개수 +1 씩) */
+    private int returnItemsOf(Long boxId) {
+        List<PlacedItem> list = placedItems.findByBoxId(boxId);
+        for (PlacedItem p : list) {
+            inventory.findById(p.getItemId())
+                    .orElseGet(() -> inventory.save(new InventoryItem(p.getItemId(), 0)))
+                    .add(1);
+        }
+        placedItems.deleteAll(list);
+        return list.size();
     }
 
     private Biome parseBiome(String id) {
@@ -173,24 +188,25 @@ public class WorldService {
 
     /* ---------- 타일 점유 ---------- */
 
-    /** 소품/아이템이 놓인 타일 (y*8+x). 포켓몬은 그 위에 설 수 없음 */
+    /** 소품/아이템이 놓인 타일 (y*8+x). 포켓몬은 그 위에 설 수 없음. except* = 지금 옮기는 자기 자신 */
     @Transactional(readOnly = true)
-    public Set<Integer> blockedTiles(Long boxId, Long exceptPropId) {
+    public Set<Integer> blockedTiles(Long boxId, Long exceptPropId, Long exceptItemId) {
         Set<Integer> set = new HashSet<>();
         props.findByBoxId(boxId).stream()
                 .filter(p -> !p.getId().equals(exceptPropId))
                 .forEach(p -> set.add(p.getY() * BOX_SIZE + p.getX()));
-        set.addAll(itemTiles(boxId, null));
+        placedItems.findByBoxId(boxId).stream()
+                .filter(p -> !p.getId().equals(exceptItemId))
+                .forEach(p -> set.add(p.getY() * BOX_SIZE + p.getX()));
         return set;
     }
 
-    /** 박스에 놓인 아이템 타일 (아이템 기능에서 확장) */
-    protected Set<Integer> itemTiles(Long boxId, Long exceptItemId) {
-        return Collections.emptySet();
+    public int[] checkTile(Long boxId, Integer x, Integer y, Long exceptPropId) {
+        return checkTile(boxId, x, y, exceptPropId, null);
     }
 
     /** 범위 안이고 비어 있는 타일인지 확인 → [x, y] */
-    public int[] checkTile(Long boxId, Integer x, Integer y, Long exceptPropId) {
+    public int[] checkTile(Long boxId, Integer x, Integer y, Long exceptPropId, Long exceptItemId) {
         if (boxId == null || x == null || y == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "boxId, x, y 가 필요해요");
         }
@@ -198,7 +214,7 @@ public class WorldService {
         if (x < 0 || y < 0 || x >= BOX_SIZE || y >= BOX_SIZE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "박스 밖이에요");
         }
-        if (blockedTiles(boxId, exceptPropId).contains(y * BOX_SIZE + x)) {
+        if (blockedTiles(boxId, exceptPropId, exceptItemId).contains(y * BOX_SIZE + x)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 무언가 놓인 칸이에요");
         }
         return new int[]{x, y};
@@ -210,7 +226,7 @@ public class WorldService {
      */
     @Transactional
     public int[] freeTileNearCenter(Long boxId, Integer exceptPokemonId) {
-        Set<Integer> taken = new HashSet<>(blockedTiles(boxId, null));
+        Set<Integer> taken = new HashSet<>(blockedTiles(boxId, null, null));
         owned.findByBoxId(boxId).stream()
                 .filter(o -> !o.getPokemonId().equals(exceptPokemonId) && o.getTileX() != null)
                 .forEach(o -> taken.add(o.getTileY() * BOX_SIZE + o.getTileX()));
@@ -222,7 +238,7 @@ public class WorldService {
             if (!taken.contains(t[1] * BOX_SIZE + t[0])) return t;
         }
         // 꽉 찼으면 소품만 없는 가장 가까운 칸 (포켓몬끼리는 겹쳐도 돌아다니며 비켜감)
-        Set<Integer> blocked = blockedTiles(boxId, null);
+        Set<Integer> blocked = blockedTiles(boxId, null, null);
         for (int[] t : tiles) {
             if (!blocked.contains(t[1] * BOX_SIZE + t[0])) return t;
         }

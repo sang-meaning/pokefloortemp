@@ -37,9 +37,22 @@
     </section>
 
     <div id="list" class="grid"></div>
+
+    <h1 id="items" class="items-title">🎒 아이템·배지 지급</h1>
+    <p class="sub">몬스터볼·진화 도구·회복약·나무열매·지닌 물건(PokéAPI)과 관동 배지. 아직 게임에서 얻는 방법이 없어서 여기서 인벤토리에 넣어 줘요.</p>
+    <section class="panel admin-toolbar">
+      <input type="search" id="item-filter" placeholder="아이템 이름 검색">
+      <select id="item-kind"></select>
+      <label><input type="checkbox" id="item-owned"> 가진 것만</label>
+      <span id="item-count" class="msg"></span>
+      <button class="btn small ghost" id="item-import" title="PokéAPI 에서 아이템 목록 다시 받기 (없는 것만 추가)">↻ 목록 다시 받기</button>
+    </section>
+    <div class="progress hidden" id="item-progress"><i></i></div>
+    <div id="item-list" class="grid item-grid"></div>
   </main>
 
   <script src="/common.js"></script>
   <script src="/admin.js"></script>
+  <script src="/admin-items.js"></script>
 </body>
 </html>

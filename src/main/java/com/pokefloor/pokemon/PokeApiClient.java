@@ -27,6 +27,14 @@ public class PokeApiClient {
         return get("/type/{name}", name);
     }
 
+    public JsonNode getItemCategory(String name) {
+        return get("/item-category/{name}", name);
+    }
+
+    public JsonNode getItem(String nameOrId) {
+        return get("/item/{name}", nameOrId);
+    }
+
     private JsonNode get(String uri, Object var) {
         return restClient.get().uri(uri, var).retrieve().body(JsonNode.class);
     }

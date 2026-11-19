@@ -615,6 +615,7 @@ async function loadWorld() {
   props = w.props;
   rebuildWorld();
   if (typeof attachEditHandlers === 'function') props.forEach(p => attachEditHandlers('prop', p));
+  if (typeof reloadItems === 'function' && STAGE_W) await reloadItems().catch(() => {});
 }
 
 /** 박스가 늘거나 줄었을 때: 화면 크기·바닥·모든 엔티티 위치를 다시 계산. 보던 화면은 그 자리 유지 */
@@ -642,9 +643,9 @@ async function main() {
   await loadWorld();
   fitView();
 
-  if (typeof initItems === 'function') await initItems();   // items.js: 아이템·배지
   await initRoom();                                         // room.js: 포켓몬·인벤토리·박스 추가/삭제
   if (typeof initEditor === 'function') initEditor();       // editor.js: 꾸미기 모드
+  if (typeof initItems === 'function') await initItems();   // items.js: 아이템·배지 (인벤토리 탭, 꾸미기 탭)
   if (typeof initMonDrag === 'function') initMonDrag();     // dragmon.js: 포켓몬 끌어서 옮기기
 
   let last = performance.now();
