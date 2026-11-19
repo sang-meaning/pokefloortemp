@@ -16,6 +16,8 @@ function render() {
   const q = document.getElementById('search').value.trim().toLowerCase();
   const ownedCount = allPokemon.filter(p => ownedMap.has(p.id)).length;
   document.getElementById('owned-count').textContent = ownedCount;
+  const shinyCount = [...ownedMap.values()].filter(o => o.shiny).length;
+  document.getElementById('shiny-count').textContent = shinyCount;
   document.getElementById('total-count').textContent = allPokemon.length;
   document.getElementById('dex-bar').style.width =
     `${allPokemon.length ? ownedCount / allPokemon.length * 100 : 0}%`;
@@ -24,6 +26,7 @@ function render() {
     const o = ownedMap.get(p.id);
     if (filter === 'owned' && !o) return false;
     if (filter === 'missing' && o) return false;
+    if (filter === 'shiny' && !(o && o.shiny)) return false;
     if (!q) return true;
     if (String(p.id) === q || dexNo(p.id).toLowerCase().includes(q)) return true;
     // 이름은 획득한 포켓몬만 검색 (미획득은 정체를 숨김)
@@ -34,12 +37,16 @@ function render() {
     const o = ownedMap.get(p.id);
     const img = p.sprites.frontStatic || p.sprites.frontAnimated;
     return `
-      <div class="card ${o ? 'owned' : 'missing'}" data-id="${p.id}">
+      <div class="card ${o ? 'owned' : 'missing'}${o && o.shiny ? ' has-shiny' : ''}" data-id="${p.id}">
         ${o && o.placed ? '<span class="placed-tag">박스에 있음</span>' : ''}
-        <img class="sprite" src="${img}" alt="" loading="lazy">
+        ${o && o.shiny ? '<button class="shiny-flip" title="뒤집어서 이로치 보기">✨</button>' : ''}
+        <div class="flip"><div class="flip-in">
+          <img class="sprite face" src="${img}" alt="" loading="lazy">
+          ${o && o.shiny ? `<img class="sprite face back" src="${p.sprites.shinyStatic}" alt="" loading="lazy">` : ''}
+        </div></div>
         <div class="no">${dexNo(p.id)}</div>
         <div class="name">${o ? escapeHtml(p.nameKo) : '???'}</div>
-        <div class="nick">${o && o.nickname ? '“' + escapeHtml(o.nickname) + '”' : ''}</div>
+        <div class="nick">${o && o.nickname ? '“' + escapeHtml(o.nickname) + '”' : ''}${o && o.stars ? ` ${starsHtml(o.stars)}` : ''}</div>
         <div class="types">${o ? typeChips(p.typesKo) : ''}</div>
       </div>`;
   }).join('') || '<p class="msg">해당하는 포켓몬이 없어요.</p>';
@@ -63,8 +70,11 @@ function openDetail(id) {
     const date = new Date(o.obtainedAt).toLocaleString('ko-KR');
     box.innerHTML = `
       <button class="close" data-close>×</button>
-      <img class="detail-img" src="${art}" alt="">
-      <div class="detail-no">${dexNo(p.id)} · ${escapeHtml(p.genusKo)}</div>
+      <div class="detail-art${o.shiny ? ' has-shiny' : ''}">
+        <img class="detail-img" id="detail-img" src="${art}" alt="">
+        ${o.shiny ? `<button class="btn small" id="detail-shiny" data-normal="${art}" data-shiny="${p.sprites.shinyArtwork}">✨ 이로치 보기</button>` : '<div class="detail-noshiny">이로치는 아직 · 던전·카드 게임에서 4% 확률</div>'}
+      </div>
+      <div class="detail-no">${dexNo(p.id)} · ${escapeHtml(p.genusKo)} ${starsHtml(o.stars)}</div>
       <div class="detail-name">${escapeHtml(o.nickname || p.nameKo)}</div>
       ${o.nickname ? `<div class="detail-real">본래 이름 ${escapeHtml(p.nameKo)}</div>` : ''}
       <div class="detail-types">${typeChips(p.typesKo)}</div>
@@ -79,6 +89,15 @@ function openDetail(id) {
         <a class="btn ghost" href="/">🏝 내 박스 보기</a>
       </div>
       <div class="detail-meta">획득 ${date}</div>`;
+    const sb = box.querySelector('#detail-shiny');
+    if (sb) sb.onclick = () => {
+      const img = box.querySelector('#detail-img');
+      const toShiny = !sb.classList.contains('on');
+      sb.classList.toggle('on', toShiny);
+      img.classList.add('turn');
+      setTimeout(() => { img.src = toShiny ? sb.dataset.shiny : sb.dataset.normal; img.classList.remove('turn'); }, 180);
+      sb.textContent = toShiny ? '원래 색 보기' : '✨ 이로치 보기';
+    };
     box.querySelector('#nick-save').onclick = async () => {
       try {
         const updated = await api(`/api/collection/${id}`, {
@@ -100,6 +119,8 @@ function openDetail(id) {
 }
 
 document.getElementById('dex').addEventListener('click', e => {
+  const flipBtn = e.target.closest('.shiny-flip');
+  if (flipBtn) { flipBtn.closest('.card').classList.toggle('flipped'); return; }
   const card = e.target.closest('.card');
   if (card) openDetail(+card.dataset.id);
 });

@@ -24,7 +24,7 @@ function spawnOwned(owned) {
   if (!box) return;
   const m = new Monster(owned.pokemon, ...toWorld(box, owned.x ?? N / 2, owned.y ?? N / 2));
   m.owned = owned;
-  m.label.textContent = displayName(owned);
+  m.applyOwned();
   monsters.push(m);
   m.unstick();
 }
@@ -43,7 +43,7 @@ function updateOwned(updated) {
   const m = monsterOf(updated.pokemon.id);
   if (m) {
     m.owned = updated;
-    m.label.textContent = displayName(updated);
+    m.applyOwned();
   }
 }
 
@@ -107,9 +107,9 @@ function renderMonTab() {
     const box = o.placed && boxById(o.boxId);
     return `
     <div class="bag-item${o.placed ? ' placed' : ''}" data-id="${o.pokemon.id}">
-      <img src="${o.pokemon.sprites.frontStatic || o.pokemon.sprites.frontAnimated}" alt="">
+      <img src="${spritesOf(o).still || spritesOf(o).front}" alt="">
       <div class="who">
-        <b>${escapeHtml(displayName(o))}</b>
+        <b>${o.showShiny ? '<span class="shiny-mark">✨</span>' : ''}${escapeHtml(displayName(o))} ${starsHtml(o.stars)}</b>
         <small>${dexNo(o.pokemon.id)} ${o.nickname ? escapeHtml(o.pokemon.nameKo) : ''}
           ${box ? ` · ${box.emoji} ${escapeHtml(box.biomeName)}` : ' · 인벤토리'}</small>
       </div>
@@ -287,6 +287,15 @@ async function initRoom() {
   });
   document.getElementById('info-unplace').addEventListener('click', () => {
     if (selected) setPlaced(selected.data.id, false);
+  });
+  document.getElementById('info-shiny').addEventListener('click', async () => {
+    if (!selected?.owned) return;
+    const updated = await api(`/api/collection/${selected.data.id}`, {
+      method: 'PATCH', body: { showShiny: !selected.owned.showShiny },
+    });
+    updateOwned(updated);
+    showInfo(selected);
+    renderBag();
   });
 
   // 박스 추가 / 삭제

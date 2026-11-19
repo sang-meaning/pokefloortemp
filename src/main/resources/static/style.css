@@ -192,7 +192,7 @@ html, body {
 .bag-empty a { color: #4f7cff; }
 .nav-extra .btn { padding: 6px 12px; font-size: 13px; }
 
-.info-actions { display: flex; gap: 6px; margin-top: 12px; }
+.info-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .info-actions .btn.ghost { background: #e6dfcf; color: #333; }
 
 
@@ -336,3 +336,15 @@ img.badge { image-rendering: pixelated; }
 .bag-group { font-size: 11px; font-weight: 700; color: #8a7f6a; margin: 10px 4px 4px; }
 .item-row img { width: 40px; height: 40px; }
 .item-row img.badge { width: 30px; height: 30px; margin: 0 5px; }
+
+/* ---------- 별, 이로치 ---------- */
+.mon .label .stars { color: #ffcf3a; font-size: 9px; }
+.mon.shiny img { filter: drop-shadow(0 0 3px rgba(255, 230, 128, .8)); }
+.info-grow { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; }
+.info-grow .stars { color: #e0a800; font-size: 15px; }
+.info-grow .stars i { color: #d9d2c0; }
+.info-grow small { color: #888; white-space: nowrap; }
+.grow-bar { flex: 1; height: 6px; background: #e6dfcf; border-radius: 4px; overflow: hidden; }
+.grow-bar i { display: block; height: 100%; background: linear-gradient(90deg, #ffcf3a, #ff9f43); }
+.bag-item .stars { font-size: 11px; }
+.nav-link { padding: 6px 9px; }

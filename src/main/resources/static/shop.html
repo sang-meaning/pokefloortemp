@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>상점 · PokeFloor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/pages.css">
+  <link rel="stylesheet" href="/shop.css">
+</head>
+<body>
+  <main class="page">
+    <div class="shop-head">
+      <div>
+        <h1>🏪 상점</h1>
+        <p class="sub">던전에서 번 골드로 몬스터볼과 도구를 사요. 몬스터볼이 있어야 보스를 잡을 수 있어요!</p>
+      </div>
+      <div class="wallet" id="wallet">💰 0</div>
+    </div>
+    <div id="sections"></div>
+    <div id="msg" class="shop-msg"></div>
+  </main>
+
+  <div id="candy" class="modal hidden">
+    <div class="modal-card">
+      <button class="x" id="candy-close">×</button>
+      <h2>🍬 이상한사탕을 먹일 포켓몬</h2>
+      <p class="sub">경험치 +120 (별 3개면 더 못 먹어요)</p>
+      <div id="candy-list" class="candy-list"></div>
+    </div>
+  </div>
+
+  <script src="/common.js"></script>
+  <script src="/dungeon-fx.js"></script>
+  <script src="/shop.js"></script>
+</body>
+</html>

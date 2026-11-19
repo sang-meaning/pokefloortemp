@@ -15,7 +15,8 @@
     </div>
     <div id="empty-room" class="empty-room hidden">
       <p>아직 박스에 나와 있는 포켓몬이 없어요.</p>
-      <a class="btn" href="/game.html">🃏 카드 게임으로 포켓몬 얻기</a>
+      <a class="btn" href="/dungeon.html">⚔ 오늘의 던전 (처음이면 스타터 받기)</a>
+      <a class="btn ghost" href="/game.html">🃏 카드 게임</a>
       <button class="btn ghost" id="empty-open-bag">🎒 인벤토리 열기</button>
     </div>
     <div class="room-hint" id="room-hint">포켓몬을 클릭해 보세요 · 휠로 확대/축소 · 빈 곳을 끌어서 화면 이동</div>
@@ -73,6 +74,7 @@
     <div class="info-no" id="info-no"></div>
     <h2 id="info-name"></h2>
     <div class="info-genus" id="info-genus"></div>
+    <div class="info-grow" id="info-grow"></div>
     <div class="info-types" id="info-types"></div>
     <dl class="info-stats">
       <dt>키</dt><dd id="info-height"></dd>
@@ -83,12 +85,14 @@
     <div class="info-actions">
       <button id="info-rename" class="btn small ghost">✎ 별명 바꾸기</button>
       <button id="info-unplace" class="btn small ghost">인벤토리에 넣기</button>
+      <button id="info-shiny" class="btn small ghost hidden">✨ 이로치로 보기</button>
     </div>
   </aside>
 
   <div id="flash" class="flash"></div>
 
   <script src="/common.js"></script>
+  <script src="/biomes.js"></script>
   <script src="/app.js"></script>
   <script src="/room.js"></script>
   <script src="/editor.js"></script>

@@ -1,0 +1,36 @@
+.hidden { display: none !important; }
+.shop-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.wallet { font-size: 26px; font-weight: 900; color: #ffd84a; background: #252b39; border: 2px solid #4b5878; border-radius: 14px; padding: 8px 18px; }
+.shop-sec h2 { font-size: 17px; margin: 24px 0 10px; }
+.shop-sec h2 small { font-size: 12px; color: #8b95a8; font-weight: 400; margin-left: 6px; }
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.shop-card {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
+  background: #252b39; border: 2px solid #323a4d; border-radius: 14px; padding: 12px 10px;
+}
+.shop-card img { width: 60px; height: 60px; image-rendering: pixelated; }
+.shop-card b { font-size: 15px; }
+.shop-card small { font-size: 11px; color: #8b95a8; min-height: 28px; }
+.shop-card .own { font-size: 12px; color: #c9d1e0; }
+.shop-card .price { font-weight: 800; color: #ffd84a; }
+.shop-card .buy { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
+.shop-card .rate { position: absolute; right: 10px; top: 8px; font-style: normal; font-weight: 900; color: #6dff8a; font-size: 13px; }
+.shop-card.bought { animation: pop .35s; }
+@keyframes pop { 50% { transform: scale(1.06); border-color: #ffd84a; } }
+.shop-card.off { opacity: .5; }
+.shop-msg {
+  position: fixed; left: 50%; bottom: 30px; transform: translate(-50%, 20px); opacity: 0; transition: .2s;
+  background: #1d2230; border: 1px solid #3fa15a; color: #b9ff9a; padding: 10px 18px; border-radius: 999px; font-weight: 700;
+}
+.shop-msg.show { opacity: 1; transform: translate(-50%, 0); }
+.shop-msg.bad { border-color: #c94a42; color: #ffb4a8; }
+.modal { position: fixed; inset: 0; background: rgba(5,7,12,.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal-card { position: relative; width: min(640px, 92vw); max-height: 80vh; overflow: auto; background: #1d2230; border: 1px solid #3b4664; border-radius: 16px; padding: 20px; }
+.modal-card h2 { margin: 0; }
+.modal-card .x { position: absolute; right: 12px; top: 8px; border: 0; background: none; color: #aaa; font-size: 24px; cursor: pointer; }
+.candy-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.candy-mon { display: flex; flex-direction: column; align-items: center; gap: 2px; background: #252b39; border: 2px solid #323a4d; border-radius: 12px; padding: 8px; color: inherit; font: inherit; cursor: pointer; }
+.candy-mon:hover { border-color: #ffd84a; }
+.candy-mon img { width: 56px; height: 56px; image-rendering: pixelated; }
+.candy-mon .bar { display: block; width: 100%; height: 4px; background: #111; border-radius: 4px; overflow: hidden; }
+.candy-mon .bar i { display: block; height: 100%; background: #ffcf3a; }

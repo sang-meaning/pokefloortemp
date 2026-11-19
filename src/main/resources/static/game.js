@@ -138,10 +138,11 @@ function showResult(res) {
 
   if (res.result === 'WIN' && res.reward) {
     const p = res.reward.pokemon;
-    title.textContent = '🎉 새 포켓몬 획득!';
+    const shiny = res.reward.shiny;
+    title.textContent = shiny ? '✨ 이로치 포켓몬 획득!! ✨' : '🎉 새 포켓몬 획득!';
     body.innerHTML = `
-      <img class="reward-img" src="${p.sprites.officialArtwork || p.sprites.frontAnimated}" alt="">
-      <div class="reward-name">${escapeHtml(p.nameKo)}</div>
+      <img class="reward-img${shiny ? ' shiny' : ''}" src="${shiny ? p.sprites.shinyArtwork : (p.sprites.officialArtwork || p.sprites.frontAnimated)}" alt="">
+      <div class="reward-name">${shiny ? '✨ ' : ''}${escapeHtml(p.nameKo)}</div>
       <div class="reward-meta">${dexNo(p.id)} · ${escapeHtml(p.genusKo)} · ${res.elapsedSeconds.toFixed(1)}초 클리어</div>
       <div class="reward-types">${typeChips(p.typesKo)}</div>
       <div class="nick-row">
