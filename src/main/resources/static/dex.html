@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>도감 · PokeFloor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/pages.css">
+  <link rel="stylesheet" href="/dex.css">
+</head>
+<body>
+  <main class="page">
+    <div class="dex-head">
+      <div>
+        <h1>📖 도감</h1>
+        <p class="sub">카드 게임에서 얻은 포켓몬이 채워져요. 아직 못 만난 포켓몬은 그림자로만 보여요.</p>
+      </div>
+      <div class="dex-progress">
+        <div class="dex-count"><b id="owned-count">0</b> / <span id="total-count">0</span></div>
+        <div class="progress"><i id="dex-bar"></i></div>
+      </div>
+    </div>
+
+    <section class="panel dex-toolbar">
+      <div class="seg" id="filter">
+        <button data-f="all" class="on">전체</button>
+        <button data-f="owned">획득</button>
+        <button data-f="missing">미획득</button>
+      </div>
+      <input type="search" id="search" placeholder="번호 검색 (획득한 포켓몬은 이름도)">
+    </section>
+
+    <div id="dex" class="grid dex-grid"></div>
+  </main>
+
+  <div id="detail" class="modal hidden">
+    <div class="modal-box" id="detail-box"></div>
+  </div>
+
+  <script src="/common.js"></script>
+  <script src="/dex.js"></script>
+</body>
+</html>

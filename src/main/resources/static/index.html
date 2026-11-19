@@ -4,20 +4,31 @@
   <meta charset="UTF-8">
   <title>PokeFloor</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/pages.css">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <header class="topbar">
-    <strong>PokeFloor</strong>
-    <span class="hint">포켓몬을 클릭해 보세요 · 마우스 휠로 확대/축소 · 드래그로 이동</span>
-  </header>
-
   <main id="viewport">
     <div id="stage">
       <canvas id="floor"></canvas>
       <div id="entities"></div>
     </div>
+    <div id="empty-room" class="empty-room hidden">
+      <p>아직 방에 나와 있는 포켓몬이 없어요.</p>
+      <a class="btn" href="/game.html">🃏 카드 게임으로 포켓몬 얻기</a>
+      <button class="btn ghost" id="empty-open-bag">🎒 내 포켓몬 꺼내기</button>
+    </div>
+    <div class="room-hint">포켓몬을 클릭해 보세요 · 휠로 확대/축소 · 드래그로 이동</div>
   </main>
+
+  <aside id="bag" class="hidden">
+    <div class="bag-head">
+      <strong>🎒 내 포켓몬</strong>
+      <button id="bag-close" aria-label="닫기">×</button>
+    </div>
+    <p class="bag-sub" id="bag-sub"></p>
+    <div id="bag-list"></div>
+  </aside>
 
   <aside id="info" class="hidden">
     <button id="info-close" aria-label="닫기">×</button>
@@ -31,8 +42,14 @@
       <dt>몸무게</dt><dd id="info-weight"></dd>
     </dl>
     <p class="info-flavor" id="info-flavor"></p>
+    <div class="info-actions">
+      <button id="info-rename" class="btn small ghost">✎ 별명 바꾸기</button>
+      <button id="info-unplace" class="btn small ghost">가방에 넣기</button>
+    </div>
   </aside>
 
+  <script src="/common.js"></script>
   <script src="/app.js"></script>
+  <script src="/room.js"></script>
 </body>
 </html>

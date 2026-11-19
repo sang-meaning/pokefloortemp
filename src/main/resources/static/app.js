@@ -316,6 +316,7 @@ class Monster {
     this.img = this.el.querySelector('img');
     this.label = this.el.querySelector('.label');
     this.label.textContent = data.nameKo;
+    this.owned = null;   // 획득 정보(별명 등). room.js 에서 채움
     this.hires = MON_MODE === 'home' && !!data.sprites.home;
     this.phase = Math.random() * 10;
     if (this.hires) {
@@ -462,27 +463,22 @@ class Monster {
 }
 
 /* ---------- 정보 패널 ---------- */
-const TYPE_COLORS = {
-  '노말': '#9fa19f', '불꽃': '#e62829', '물': '#2980ef', '풀': '#3fa129', '전기': '#d8b400',
-  '얼음': '#3dcef3', '격투': '#ff8000', '독': '#9141cb', '땅': '#915121', '비행': '#81b9ef',
-  '에스퍼': '#ef4179', '벌레': '#91a119', '바위': '#afa981', '고스트': '#704170',
-  '드래곤': '#5060e1', '악': '#624d4e', '강철': '#60a1b8', '페어리': '#ef70ef',
-};
+// TYPE_COLORS 는 common.js
 let selected = null;
 
 function showInfo(mon) {
   const d = mon.data;
+  const owned = mon.owned;
   if (selected) selected.el.classList.remove('selected');
   selected = mon;
   mon.el.classList.add('selected');
   document.getElementById('info-img').src =
     d.sprites.officialArtwork || d.sprites.frontAnimated || d.sprites.frontStatic;
   document.getElementById('info-no').textContent = `No.${String(d.id).padStart(4, '0')}`;
-  document.getElementById('info-name').textContent = d.nameKo;
-  document.getElementById('info-genus').textContent = d.genusKo;
-  document.getElementById('info-types').innerHTML = d.typesKo
-    .map(t => `<span class="type-chip" style="background:${TYPE_COLORS[t] || '#888'}">${t}</span>`)
-    .join('');
+  document.getElementById('info-name').textContent = displayName(owned);
+  document.getElementById('info-genus').textContent =
+    owned && owned.nickname ? `${d.nameKo} · ${d.genusKo}` : d.genusKo;
+  document.getElementById('info-types').innerHTML = typeChips(d.typesKo);
   document.getElementById('info-height').textContent = `${d.heightM} m`;
   document.getElementById('info-weight').textContent = `${d.weightKg} kg`;
   document.getElementById('info-flavor').textContent = d.flavorTextKo;
@@ -564,20 +560,8 @@ async function main() {
   FURNITURE.forEach(createFurniture);
   fitView();
 
-  // ?ids=1,4,7 처럼 여러 마리 가능. 기본은 이상해씨(1)
-  const ids = (new URLSearchParams(location.search).get('ids') || '1')
-    .split(',').map(s => parseInt(s, 10)).filter(n => n > 0);
-
-  for (const id of ids) {
-    try {
-      const res = await fetch(`/api/pokemon/${id}`);
-      if (!res.ok) throw new Error(res.status);
-      const data = await res.json();
-      monsters.push(new Monster(data, ...randomFreeTile()));
-    } catch (err) {
-      console.error(`포켓몬 ${id} 불러오기 실패`, err);
-    }
-  }
+  // 내가 획득해서 방에 꺼내 둔 포켓몬 (room.js)
+  await initRoom();
 
   let last = performance.now();
   function loop(now) {

@@ -12,7 +12,7 @@ html, body {
 .topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: 44px;
+  height: 48px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -25,7 +25,7 @@ html, body {
 
 #viewport {
   position: absolute;
-  inset: 44px 0 0 0;
+  inset: 48px 0 0 0;
   overflow: hidden;
   cursor: grab;
 }
@@ -133,3 +133,43 @@ body.pixel .furniture img { image-rendering: pixelated; }
 .info-stats dt { color: #888; }
 .info-stats dd { margin: 0; }
 .info-flavor { font-size: 13px; line-height: 1.6; margin: 8px 0 0; }
+
+/* ---------- 내 방: 가방(획득한 포켓몬), 빈 방 안내 ---------- */
+.hidden { display: none !important; }
+.room-hint {
+  position: absolute; left: 16px; bottom: 12px; font-size: 12px; color: #6f7a8f; pointer-events: none;
+}
+.empty-room {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  background: rgba(15, 18, 26, .88); border: 1px solid #323a4d; border-radius: 14px;
+  padding: 20px 24px; text-align: center; z-index: 5;
+}
+.empty-room p { margin: 0 0 12px; }
+.empty-room .btn { margin: 0 4px; }
+
+#bag {
+  position: fixed; left: 20px; top: 64px; bottom: 20px; width: 300px;
+  display: flex; flex-direction: column;
+  background: #f7f4ea; color: #2a2a2a; border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.45); z-index: 30; overflow: hidden;
+}
+.bag-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px 4px; }
+.bag-head button { border: 0; background: none; font-size: 22px; color: #777; cursor: pointer; }
+.bag-sub { margin: 0 16px 8px; font-size: 12px; color: #888; }
+#bag-list { flex: 1; overflow-y: auto; padding: 0 12px 12px; }
+.bag-item {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px; margin-bottom: 6px;
+  background: #fff; border: 1px solid #e6dccb; border-radius: 10px;
+}
+.bag-item img { width: 48px; height: 48px; object-fit: contain; image-rendering: pixelated; }
+.bag-item .who { flex: 1; min-width: 0; }
+.bag-item .who b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bag-item .who small { color: #888; font-size: 11px; }
+.bag-item .btn { white-space: nowrap; }
+.bag-item.placed { border-color: #9cc59a; background: #f1f8ee; }
+.bag-empty { text-align: center; color: #888; font-size: 13px; padding: 20px 0; }
+.bag-empty a { color: #4f7cff; }
+.nav-extra .btn { padding: 6px 12px; font-size: 13px; }
+
+.info-actions { display: flex; gap: 6px; margin-top: 12px; }
+.info-actions .btn.ghost { background: #e6dfcf; color: #333; }

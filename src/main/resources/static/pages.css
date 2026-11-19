@@ -51,7 +51,7 @@ input[type=text], input[type=number], input[type=search], select {
 .msg { font-size: 13px; color: #8b95a8; }
 .msg.err { color: #ff8a80; }
 
-.progress { height: 8px; border-radius: 4px; background: #1b1f2a; overflow: hidden; margin-top: 8px; }
+.progress { height: 8px; border-radius: 4px; background: #2c3344; overflow: hidden; margin-top: 8px; }
 .progress i { display: block; height: 100%; width: 0; background: #4f7cff; transition: width .3s; }
 
 .grid {
