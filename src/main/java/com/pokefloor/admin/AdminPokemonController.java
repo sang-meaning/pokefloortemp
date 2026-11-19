@@ -1,5 +1,6 @@
 package com.pokefloor.admin;
 
+import com.pokefloor.collection.CollectionService;
 import com.pokefloor.pokemon.PokemonDto;
 import com.pokefloor.pokemon.PokemonSeeder;
 import com.pokefloor.pokemon.PokemonService;
@@ -27,10 +28,12 @@ public class AdminPokemonController {
 
     private final PokemonService service;
     private final PokemonSeeder seeder;
+    private final CollectionService collectionService;
 
-    public AdminPokemonController(PokemonService service, PokemonSeeder seeder) {
+    public AdminPokemonController(PokemonService service, PokemonSeeder seeder, CollectionService collectionService) {
         this.service = service;
         this.seeder = seeder;
+        this.collectionService = collectionService;
     }
 
     /** 비활성화된 것까지 전부 */
@@ -70,6 +73,7 @@ public class AdminPokemonController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable int id) {
+        collectionService.removeIfOwned(id);   // 획득 기록도 같이 삭제
         service.delete(id);
     }
 }

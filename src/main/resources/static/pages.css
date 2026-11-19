@@ -65,3 +65,4 @@ input[type=text], input[type=number], input[type=search], select {
 .card .no { font-size: 11px; color: #8b95a8; }
 .card .name { font-weight: 700; margin: 2px 0 4px; }
 .card .types { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; min-height: 18px; }
+a.btn { display: inline-block; text-decoration: none; }

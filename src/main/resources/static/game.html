@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>카드 게임 · PokeFloor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/pages.css">
+  <link rel="stylesheet" href="/game.css">
+</head>
+<body>
+  <main class="page">
+    <h1>🃏 카드 짝맞추기</h1>
+    <p class="sub">같은 포켓몬 카드 두 장을 찾아 모두 뒤집으세요. 제한시간 안에 성공하면 이번 판 포켓몬 중 <b>아직 없는 한 마리</b>를 얻어요.</p>
+
+    <section id="setup" class="panel setup">
+      <div id="levels" class="levels"></div>
+      <div class="setup-foot">
+        <span id="pool-info" class="msg"></span>
+        <button id="start" class="btn">게임 시작</button>
+      </div>
+      <p id="setup-msg" class="msg err"></p>
+    </section>
+
+    <section id="play" class="hidden">
+      <div class="hud">
+        <span id="hud-level"></span>
+        <span>맞춘 쌍 <b id="hud-pairs">0</b></span>
+        <span>시도 <b id="hud-moves">0</b></span>
+        <span class="hud-new" id="hud-new"></span>
+        <span class="hud-time">⏱ <b id="hud-time">0</b>초</span>
+      </div>
+      <div class="timebar"><i id="timebar"></i></div>
+      <div id="board" class="board"></div>
+      <div class="play-foot"><button id="give-up" class="btn ghost small">그만하기</button></div>
+    </section>
+  </main>
+
+  <div id="result" class="modal hidden">
+    <div class="modal-box">
+      <div id="result-title" class="result-title"></div>
+      <div id="result-body"></div>
+      <div class="modal-actions" id="result-actions"></div>
+    </div>
+  </div>
+
+  <script src="/common.js"></script>
+  <script src="/game.js"></script>
+</body>
+</html>
