@@ -1,0 +1,67 @@
+/* 게임·도감·관리자 페이지 공통 스타일 */
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: #1b1f2a;
+  color: #e8ecf3;
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+a { color: inherit; }
+
+.topbar {
+  position: sticky; top: 0;
+  height: 48px;
+  display: flex; align-items: center; gap: 18px;
+  padding: 0 18px;
+  background: rgba(15, 18, 26, 0.92);
+  border-bottom: 1px solid #2c3344;
+  z-index: 50;
+}
+.brand { font-weight: 800; text-decoration: none; }
+.nav { display: flex; gap: 4px; }
+.nav-link, .nav-admin {
+  padding: 6px 12px; border-radius: 8px; text-decoration: none; color: #aab3c5; font-size: 14px;
+}
+.nav-link:hover, .nav-admin:hover { background: #262c3b; color: #fff; }
+.nav-link.on, .nav-admin.on { background: #2f3a55; color: #fff; }
+.nav-extra { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.nav-admin { font-size: 13px; }
+
+.page { max-width: 1100px; margin: 0 auto; padding: 24px 18px 60px; }
+.page h1 { margin: 0 0 4px; font-size: 24px; }
+.page .sub { color: #8b95a8; margin: 0 0 20px; font-size: 14px; }
+
+.panel {
+  background: #252b39; border: 1px solid #323a4d; border-radius: 12px; padding: 16px; margin-bottom: 16px;
+}
+.btn {
+  padding: 8px 14px; border: 0; border-radius: 8px; background: #4f7cff; color: #fff;
+  font-weight: 600; cursor: pointer; font: inherit; font-size: 14px;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn.ghost { background: #323a4d; color: #dfe5f0; }
+.btn.danger { background: #c94a42; }
+.btn.small { padding: 5px 10px; font-size: 12px; }
+input[type=text], input[type=number], input[type=search], select {
+  padding: 8px 10px; border-radius: 8px; border: 1px solid #3a4459; background: #1b1f2a; color: #e8ecf3; font: inherit;
+}
+
+.type-chip { font-size: 11px; padding: 1px 8px; border-radius: 999px; color: #fff; }
+.msg { font-size: 13px; color: #8b95a8; }
+.msg.err { color: #ff8a80; }
+
+.progress { height: 8px; border-radius: 4px; background: #1b1f2a; overflow: hidden; margin-top: 8px; }
+.progress i { display: block; height: 100%; width: 0; background: #4f7cff; transition: width .3s; }
+
+.grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;
+}
+.card {
+  background: #252b39; border: 1px solid #323a4d; border-radius: 12px; padding: 10px; text-align: center;
+  position: relative;
+}
+.card img.sprite { width: 96px; height: 96px; image-rendering: pixelated; object-fit: contain; }
+.card .no { font-size: 11px; color: #8b95a8; }
+.card .name { font-weight: 700; margin: 2px 0 4px; }
+.card .types { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; min-height: 18px; }

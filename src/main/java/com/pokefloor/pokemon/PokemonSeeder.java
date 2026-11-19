@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 처음 실행할 때 DB 가 비어 있으면 1세대(1~151번) 포켓몬을 PokéAPI 에서 받아 저장.
+ * 관리자 페이지의 "범위로 추가" 도 같은 방식으로 동작.
  * 서버 시작을 막지 않도록 백그라운드에서 진행하고, 진행 상황은 /api/pokemon/seed-status 로 확인.
  */
 @Component
@@ -39,13 +40,24 @@ public class PokemonSeeder implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        if (service.count() > 0) return;
-        total = to - from + 1;
-        running = true;
-        Thread.ofVirtual().name("pokemon-seeder").start(this::seed);
+        if (service.count() == 0) startImport(from, to);
     }
 
-    private void seed() {
+    /**
+     * from~to 번을 백그라운드로 받아 저장 (이미 있는 번호는 건너뜀).
+     * 이미 진행 중이면 false. 처음 실행 시 시드와 관리자 "범위 추가" 가 같이 사용
+     */
+    public synchronized boolean startImport(int from, int to) {
+        if (running) return false;
+        if (from < 1 || to < from) throw new IllegalArgumentException("잘못된 범위: " + from + "~" + to);
+        done.set(0);
+        total = to - from + 1;
+        running = true;
+        Thread.ofVirtual().name("pokemon-import").start(() -> importRange(from, to));
+        return true;
+    }
+
+    private void importRange(int from, int to) {
         log.info("포켓몬 {}~{}번을 PokéAPI 에서 받아오는 중...", from, to);
         try (ExecutorService pool = Executors.newFixedThreadPool(6)) {
             for (int id = from; id <= to; id++) {

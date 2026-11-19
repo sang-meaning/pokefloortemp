@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>관리자 · PokeFloor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/pages.css">
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+  <main class="page">
+    <h1>⚙ 포켓몬 관리</h1>
+    <p class="sub">게임과 도감에 등장할 포켓몬을 PokéAPI에서 추가하거나 끌 수 있어요. 끈 포켓몬은 카드 게임과 도감에 나오지 않아요.</p>
+
+    <section class="panel admin-forms">
+      <form id="add-one" class="row">
+        <strong>번호로 추가</strong>
+        <input type="number" id="one-id" min="1" placeholder="도감 번호 (예: 152)" required>
+        <button class="btn" type="submit">추가</button>
+      </form>
+      <form id="add-range" class="row">
+        <strong>범위로 추가</strong>
+        <input type="number" id="range-from" min="1" placeholder="시작 (예: 152)" required>
+        <span>~</span>
+        <input type="number" id="range-to" min="1" placeholder="끝 (예: 251)" required>
+        <button class="btn" type="submit">한꺼번에 추가</button>
+        <span class="hint">2세대 152~251 · 3세대 252~386</span>
+      </form>
+      <div id="import-status" class="msg"></div>
+      <div class="progress hidden" id="import-progress"><i></i></div>
+    </section>
+
+    <section class="panel admin-toolbar">
+      <input type="search" id="filter" placeholder="이름·번호·타입 검색">
+      <label><input type="checkbox" id="only-inactive"> 꺼진 것만</label>
+      <span id="count" class="msg"></span>
+    </section>
+
+    <div id="list" class="grid"></div>
+  </main>
+
+  <script src="/common.js"></script>
+  <script src="/admin.js"></script>
+</body>
+</html>

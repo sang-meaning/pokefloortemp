@@ -1,0 +1,16 @@
+.admin-forms .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.admin-forms strong { width: 90px; font-size: 14px; }
+.admin-forms input[type=number] { width: 150px; }
+.admin-forms .hint { color: #8b95a8; font-size: 12px; }
+.hidden { display: none !important; }
+.admin-toolbar { display: flex; gap: 14px; align-items: center; }
+.admin-toolbar input[type=search] { flex: 1; max-width: 320px; }
+.admin-toolbar label { font-size: 13px; color: #aab3c5; display: flex; gap: 6px; align-items: center; }
+.card.off { opacity: .45; }
+.card.off .sprite { filter: grayscale(1); }
+.card .actions { display: flex; gap: 4px; justify-content: center; margin-top: 8px; }
+.card .state {
+  position: absolute; top: 8px; right: 8px; font-size: 10px; padding: 1px 6px; border-radius: 6px;
+  background: #3fa15a; color: #fff;
+}
+.card.off .state { background: #6b7280; }
