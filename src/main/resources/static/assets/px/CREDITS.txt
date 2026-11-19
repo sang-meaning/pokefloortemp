@@ -1,0 +1,9 @@
+도트 소품 이미지 출처 (모두 CC0 1.0, 저작자 표시 의무 없음)
+
+- Kenney "Roguelike/RPG pack"       https://kenney.nl/assets/roguelike-rpg-pack
+- Kenney "Roguelike Caves & Dungeons" https://kenney.nl/assets/roguelike-caves-dungeons
+- Kenney "Tiny Town"                 https://kenney.nl/assets/tiny-town
+- Kenney "Tiny Dungeon"              https://kenney.nl/assets/tiny-dungeon
+
+16×16 타일에서 잘라내고, 화산·설원·바다·유령 바이옴용 일부는 색을 바꿔 만들었어요.
+만드는 스크립트: tools/pxbuild (specs.py = 목록, build.py = 자르기/재색칠)

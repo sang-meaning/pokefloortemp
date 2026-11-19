@@ -1,0 +1,843 @@
+[
+{
+"key": "tree_round",
+"name": "둥근 나무",
+"biomes": [
+"meadow",
+"forest",
+"village"
+],
+"w": 16,
+"h": 16
+},
+{
+"key": "tree_autumn",
+"name": "단풍 나무",
+"biomes": [
+"forest",
+"meadow"
+],
+"w": 16,
+"h": 16
+},
+{
+"key": "tree_dark",
+"name": "짙은 나무",
+"biomes": [
+"forest"
+],
+"w": 16,
+"h": 16
+},
+{
+"key": "pine",
+"name": "소나무",
+"biomes": [
+"forest",
+"meadow"
+],
+"w": 16,
+"h": 16
+},
+{
+"key": "pine_autumn",
+"name": "갈색 소나무",
+"biomes": [
+"forest"
+],
+"w": 16,
+"h": 16
+},
+{
+"key": "pine_dark",
+"name": "전나무",
+"biomes": [
+"forest"
+],
+"w": 16,
+"h": 16
+},
+{
+"key": "tree_fruit",
+"name": "열매 나무",
+"biomes": [
+"meadow",
+"village"
+],
+"w": 16,
+"h": 16
+},
+{
+"key": "tree_dead",
+"name": "마른 나무",
+"biomes": [
+"ghost",
+"desert",
+"volcano"
+],
+"w": 14,
+"h": 15
+},
+{
+"key": "sapling",
+"name": "작은 나무",
+"biomes": [
+"meadow",
+"forest"
+],
+"w": 10,
+"h": 15
+},
+{
+"key": "sapling_autumn",
+"name": "작은 단풍",
+"biomes": [
+"forest"
+],
+"w": 10,
+"h": 15
+},
+{
+"key": "bush",
+"name": "덤불",
+"biomes": [
+"meadow",
+"forest",
+"village"
+],
+"w": 16,
+"h": 12
+},
+{
+"key": "bush_autumn",
+"name": "단풍 덤불",
+"biomes": [
+"forest"
+],
+"w": 16,
+"h": 12
+},
+{
+"key": "bush_teal",
+"name": "청록 덤불",
+"biomes": [
+"forest",
+"sea"
+],
+"w": 16,
+"h": 12
+},
+{
+"key": "bush_berry",
+"name": "열매 덤불",
+"biomes": [
+"meadow",
+"forest"
+],
+"w": 16,
+"h": 12
+},
+{
+"key": "bush_flower",
+"name": "꽃 덤불",
+"biomes": [
+"meadow"
+],
+"w": 12,
+"h": 14
+},
+{
+"key": "sprout",
+"name": "새싹",
+"biomes": [
+"meadow",
+"forest"
+],
+"w": 9,
+"h": 7
+},
+{
+"key": "daisy",
+"name": "데이지",
+"biomes": [
+"meadow"
+],
+"w": 11,
+"h": 9
+},
+{
+"key": "flower_red",
+"name": "빨간 꽃",
+"biomes": [
+"meadow",
+"village"
+],
+"w": 9,
+"h": 8
+},
+{
+"key": "flower_purple",
+"name": "보라 꽃",
+"biomes": [
+"meadow",
+"ghost"
+],
+"w": 9,
+"h": 8
+},
+{
+"key": "flower_white",
+"name": "흰 꽃",
+"biomes": [
+"meadow",
+"snow"
+],
+"w": 9,
+"h": 8
+},
+{
+"key": "cactus",
+"name": "선인장",
+"biomes": [
+"desert"
+],
+"w": 12,
+"h": 16
+},
+{
+"key": "cactus_round",
+"name": "둥근 선인장",
+"biomes": [
+"desert"
+],
+"w": 14,
+"h": 14
+},
+{
+"key": "stump",
+"name": "그루터기",
+"biomes": [
+"forest",
+"meadow"
+],
+"w": 13,
+"h": 10
+},
+{
+"key": "mushroom_red",
+"name": "빨간 버섯",
+"biomes": [
+"forest",
+"cave"
+],
+"w": 16,
+"h": 12
+},
+{
+"key": "beehive",
+"name": "벌집",
+"biomes": [
+"forest",
+"meadow"
+],
+"w": 16,
+"h": 14
+},
+{
+"key": "mushroom_a",
+"name": "버섯",
+"biomes": [
+"forest",
+"cave",
+"ghost"
+],
+"w": 14,
+"h": 10
+},
+{
+"key": "mushroom_b",
+"name": "큰 버섯",
+"biomes": [
+"forest",
+"cave"
+],
+"w": 14,
+"h": 10
+},
+{
+"key": "rock_brown",
+"name": "갈색 바위",
+"biomes": [
+"meadow",
+"desert",
+"cave"
+],
+"w": 13,
+"h": 9
+},
+{
+"key": "rock_brown_s",
+"name": "작은 돌",
+"biomes": [
+"meadow",
+"desert",
+"sea"
+],
+"w": 13,
+"h": 9
+},
+{
+"key": "rock_moss",
+"name": "이끼 바위",
+"biomes": [
+"forest",
+"cave"
+],
+"w": 13,
+"h": 9
+},
+{
+"key": "rock_gray",
+"name": "회색 바위",
+"biomes": [
+"cave",
+"snow",
+"meadow"
+],
+"w": 13,
+"h": 9
+},
+{
+"key": "rock_gray_moss",
+"name": "이끼 낀 회색 바위",
+"biomes": [
+"cave",
+"forest"
+],
+"w": 13,
+"h": 9
+},
+{
+"key": "stalagmite",
+"name": "석순",
+"biomes": [
+"cave"
+],
+"w": 12,
+"h": 14
+},
+{
+"key": "stalagmite_moss",
+"name": "이끼 석순",
+"biomes": [
+"cave",
+"forest"
+],
+"w": 12,
+"h": 14
+},
+{
+"key": "stalagmite_gray",
+"name": "회색 석순",
+"biomes": [
+"cave",
+"snow"
+],
+"w": 12,
+"h": 14
+},
+{
+"key": "skull",
+"name": "해골",
+"biomes": [
+"cave",
+"ghost",
+"volcano"
+],
+"w": 7,
+"h": 7
+},
+{
+"key": "bones",
+"name": "뼈",
+"biomes": [
+"cave",
+"ghost",
+"desert"
+],
+"w": 11,
+"h": 11
+},
+{
+"key": "cave_mushrooms",
+"name": "동굴 버섯",
+"biomes": [
+"cave",
+"ghost"
+],
+"w": 14,
+"h": 10
+},
+{
+"key": "vine",
+"name": "덩굴",
+"biomes": [
+"cave",
+"forest",
+"sea"
+],
+"w": 9,
+"h": 30
+},
+{
+"key": "brazier",
+"name": "화로",
+"biomes": [
+"cave",
+"volcano",
+"village"
+],
+"w": 10,
+"h": 13
+},
+{
+"key": "tent_green",
+"name": "초록 텐트",
+"biomes": [
+"village",
+"meadow",
+"forest"
+],
+"w": 31,
+"h": 32
+},
+{
+"key": "tent_beige",
+"name": "베이지 텐트",
+"biomes": [
+"village",
+"desert"
+],
+"w": 31,
+"h": 32
+},
+{
+"key": "campfire",
+"name": "모닥불",
+"biomes": [
+"village",
+"forest",
+"meadow",
+"snow"
+],
+"w": 13,
+"h": 14
+},
+{
+"key": "sign",
+"name": "표지판",
+"biomes": [
+"village",
+"meadow"
+],
+"w": 14,
+"h": 13
+},
+{
+"key": "barrel",
+"name": "나무통",
+"biomes": [
+"village"
+],
+"w": 14,
+"h": 16
+},
+{
+"key": "chest",
+"name": "보물상자",
+"biomes": [
+"village",
+"cave",
+"sea"
+],
+"w": 16,
+"h": 14
+},
+{
+"key": "crate",
+"name": "나무 상자",
+"biomes": [
+"village"
+],
+"w": 16,
+"h": 16
+},
+{
+"key": "torch",
+"name": "횃불",
+"biomes": [
+"village",
+"cave",
+"volcano"
+],
+"w": 5,
+"h": 14
+},
+{
+"key": "fence",
+"name": "울타리",
+"biomes": [
+"village",
+"meadow"
+],
+"w": 16,
+"h": 16
+},
+{
+"key": "table",
+"name": "탁자",
+"biomes": [
+"village"
+],
+"w": 16,
+"h": 12
+},
+{
+"key": "chair",
+"name": "의자",
+"biomes": [
+"village"
+],
+"w": 10,
+"h": 13
+},
+{
+"key": "bookshelf",
+"name": "책장",
+"biomes": [
+"village"
+],
+"w": 16,
+"h": 16
+},
+{
+"key": "gold",
+"name": "금화 더미",
+"biomes": [
+"cave",
+"village"
+],
+"w": 15,
+"h": 15
+},
+{
+"key": "grave",
+"name": "묘비",
+"biomes": [
+"ghost"
+],
+"w": 14,
+"h": 14
+},
+{
+"key": "grave_cross",
+"name": "십자 묘비",
+"biomes": [
+"ghost"
+],
+"w": 14,
+"h": 14
+},
+{
+"key": "grave_stone",
+"name": "비석",
+"biomes": [
+"ghost"
+],
+"w": 11,
+"h": 15
+},
+{
+"key": "coral_purple",
+"name": "보라 산호",
+"biomes": [
+"sea"
+],
+"w": 10,
+"h": 14
+},
+{
+"key": "coral_yellow",
+"name": "노란 산호",
+"biomes": [
+"sea"
+],
+"w": 10,
+"h": 14
+},
+{
+"key": "coral_orange",
+"name": "주황 산호",
+"biomes": [
+"sea"
+],
+"w": 10,
+"h": 14
+},
+{
+"key": "seaweed",
+"name": "해초",
+"biomes": [
+"sea"
+],
+"w": 10,
+"h": 14
+},
+{
+"key": "skeleton",
+"name": "해골 무더기",
+"biomes": [
+"ghost",
+"cave"
+],
+"w": 11,
+"h": 13
+},
+{
+"key": "roots",
+"name": "뿌리 덩굴",
+"biomes": [
+"cave",
+"ghost"
+],
+"w": 9,
+"h": 30
+},
+{
+"key": "pillar",
+"name": "돌기둥",
+"biomes": [
+"cave",
+"ghost",
+"village"
+],
+"w": 16,
+"h": 16
+},
+{
+"key": "grave_wood",
+"name": "나무 십자가",
+"biomes": [
+"ghost"
+],
+"w": 9,
+"h": 11
+},
+{
+"key": "grave_cross_w",
+"name": "흰 십자 묘비",
+"biomes": [
+"ghost",
+"snow"
+],
+"w": 12,
+"h": 14
+},
+{
+"key": "gold_bars",
+"name": "금괴",
+"biomes": [
+"cave",
+"desert"
+],
+"w": 13,
+"h": 15
+},
+{
+"key": "lilypad",
+"name": "연잎",
+"biomes": [
+"sea",
+"forest"
+],
+"w": 11,
+"h": 8
+},
+{
+"key": "stump_axe",
+"name": "도끼 그루터기",
+"biomes": [
+"forest",
+"village"
+],
+"w": 14,
+"h": 14
+},
+{
+"key": "candelabra",
+"name": "촛대",
+"biomes": [
+"ghost",
+"village"
+],
+"w": 11,
+"h": 11
+},
+{
+"key": "anvil",
+"name": "모루",
+"biomes": [
+"village",
+"volcano"
+],
+"w": 14,
+"h": 11
+},
+{
+"key": "fireplace",
+"name": "벽난로",
+"biomes": [
+"village",
+"snow"
+],
+"w": 12,
+"h": 11
+},
+{
+"key": "coral_green",
+"name": "초록 산호",
+"biomes": [
+"sea"
+],
+"w": 10,
+"h": 10
+},
+{
+"key": "coral_small",
+"name": "작은 산호",
+"biomes": [
+"sea"
+],
+"w": 10,
+"h": 10
+},
+{
+"key": "rock_volcanic",
+"name": "화산암",
+"biomes": [
+"volcano"
+],
+"w": 13,
+"h": 9
+},
+{
+"key": "rock_magma",
+"name": "마그마 바위",
+"biomes": [
+"volcano"
+],
+"w": 13,
+"h": 9
+},
+{
+"key": "stalagmite_lava",
+"name": "용암 석순",
+"biomes": [
+"volcano"
+],
+"w": 12,
+"h": 14
+},
+{
+"key": "crystal_fire",
+"name": "불꽃 결정",
+"biomes": [
+"volcano"
+],
+"w": 12,
+"h": 14
+},
+{
+"key": "crystal_ice",
+"name": "얼음 결정",
+"biomes": [
+"snow",
+"cave"
+],
+"w": 12,
+"h": 14
+},
+{
+"key": "crystal_amethyst",
+"name": "자수정",
+"biomes": [
+"cave",
+"ghost"
+],
+"w": 12,
+"h": 14
+},
+{
+"key": "pine_snow",
+"name": "눈 덮인 전나무",
+"biomes": [
+"snow"
+],
+"w": 16,
+"h": 16
+},
+{
+"key": "tree_snow",
+"name": "눈 덮인 나무",
+"biomes": [
+"snow"
+],
+"w": 16,
+"h": 16
+},
+{
+"key": "bush_snow",
+"name": "눈 덮인 덤불",
+"biomes": [
+"snow"
+],
+"w": 16,
+"h": 12
+},
+{
+"key": "rock_snow",
+"name": "눈 덮인 바위",
+"biomes": [
+"snow"
+],
+"w": 13,
+"h": 9
+},
+{
+"key": "rock_sea",
+"name": "바다 바위",
+"biomes": [
+"sea"
+],
+"w": 13,
+"h": 9
+},
+{
+"key": "tree_ghost",
+"name": "유령 나무",
+"biomes": [
+"ghost"
+],
+"w": 14,
+"h": 15
+},
+{
+"key": "bush_ghost",
+"name": "보랏빛 덤불",
+"biomes": [
+"ghost"
+],
+"w": 16,
+"h": 12
+}
+]
