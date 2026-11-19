@@ -1,212 +1,1562 @@
 {
- "wall_SE": {
-  "w": 80,
-  "h": 153,
-  "ax": 3.0,
-  "ay": 153
- },
- "wall_SW": {
-  "w": 80,
-  "h": 154,
-  "ax": 74.5,
-  "ay": 154
- },
- "wallWindow_SE": {
-  "w": 80,
-  "h": 153,
-  "ax": 3.0,
-  "ay": 153
- },
- "wallWindow_SW": {
-  "w": 80,
-  "h": 154,
-  "ax": 74.5,
-  "ay": 154
- },
- "bookcaseOpen_SW": {
-  "w": 49,
-  "h": 101,
-  "ax": 29.5,
-  "ay": 101
- },
- "bookcaseClosedWide_SW": {
-  "w": 80,
-  "h": 116,
-  "ax": 59.5,
-  "ay": 116
- },
- "desk_SE": {
-  "w": 85,
-  "h": 88,
-  "ax": 28.0,
-  "ay": 88
- },
- "chairDesk_NW": {
-  "w": 44,
-  "h": 56,
-  "ax": 19.5,
-  "ay": 56
- },
- "computerScreen_SE": {
-  "w": 35,
-  "h": 43,
-  "ax": 8.1,
-  "ay": 43
- },
- "pottedPlant_SW": {
-  "w": 21,
-  "h": 60,
-  "ax": 8.5,
-  "ay": 60
- },
- "lampRoundFloor_SE": {
-  "w": 19,
-  "h": 76,
-  "ax": 8.0,
-  "ay": 76
- },
- "plantSmall1_SE": {
-  "w": 11,
-  "h": 14,
-  "ax": 4.5,
-  "ay": 14
- },
- "loungeSofa_SW": {
-  "w": 103,
-  "h": 103,
-  "ax": 72.5,
-  "ay": 103
- },
- "tableCoffee_SW": {
-  "w": 80,
-  "h": 74,
-  "ax": 49.0,
-  "ay": 74
- },
- "rugRectangle_SW": {
-  "w": 188,
-  "h": 134,
-  "ax": 117.5,
-  "ay": 134
- },
- "cabinetTelevision_NE": {
-  "w": 79,
-  "h": 79,
-  "ax": 18.0,
-  "ay": 79
- },
- "televisionModern_NE": {
-  "w": 55,
-  "h": 67,
-  "ax": 10.5,
-  "ay": 67
- },
- "loungeChair_SE": {
-  "w": 67,
-  "h": 77,
-  "ax": 29.0,
-  "ay": 77
- },
- "lampRoundFloor_SW": {
-  "w": 19,
-  "h": 76,
-  "ax": 8.5,
-  "ay": 76
- },
- "bedDouble_SE": {
-  "w": 157,
-  "h": 138,
-  "ax": 86.0,
-  "ay": 138
- },
- "cabinetBedDrawerTable_SE": {
-  "w": 37,
-  "h": 44,
-  "ax": 15.0,
-  "ay": 44
- },
- "rugRound_SE": {
-  "w": 99,
-  "h": 71,
-  "ax": 48.0,
-  "ay": 71
- },
- "bear_SE": {
-  "w": 38,
-  "h": 39,
-  "ax": 5.5,
-  "ay": 39
- },
- "bookcaseOpenLow_SE": {
-  "w": 50,
-  "h": 65,
-  "ax": 18.0,
-  "ay": 65
- },
- "pottedPlant_SE": {
-  "w": 21,
-  "h": 60,
-  "ax": 10.0,
-  "ay": 60
- },
- "kitchenFridge_SW": {
-  "w": 52,
-  "h": 105,
-  "ax": 33.0,
-  "ay": 105
- },
- "kitchenStove_SW": {
-  "w": 67,
-  "h": 79,
-  "ax": 35.0,
-  "ay": 79
- },
- "kitchenSink_SW": {
-  "w": 67,
-  "h": 79,
-  "ax": 35.0,
-  "ay": 79
- },
- "kitchenCabinet_SW": {
-  "w": 67,
-  "h": 79,
-  "ax": 35.0,
-  "ay": 79
- },
- "tableRound_SE": {
-  "w": 83,
-  "h": 69,
-  "ax": 40.0,
-  "ay": 69
- },
- "chair_NE": {
-  "w": 31,
-  "h": 49,
-  "ax": 14.0,
-  "ay": 49
- },
- "chair_SW": {
-  "w": 31,
-  "h": 57,
-  "ax": 14.5,
-  "ay": 57
- },
- "cardboardBoxClosed_SE": {
-  "w": 32,
-  "h": 39,
-  "ax": 15.0,
-  "ay": 39
- },
- "cardboardBoxOpen_SE": {
-  "w": 44,
-  "h": 48,
-  "ax": 21.0,
-  "ay": 48
- },
- "trashcan_SE": {
-  "w": 25,
-  "h": 46,
-  "ax": 15.5,
-  "ay": 46
- }
+"loungeSofa_SE": {
+"w": 104,
+"h": 103,
+"ax": 29.0,
+"ay": 103
+},
+"loungeSofa_SW": {
+"w": 103,
+"h": 103,
+"ax": 72.5,
+"ay": 103
+},
+"loungeSofa_NE": {
+"w": 103,
+"h": 99,
+"ax": 28.5,
+"ay": 99
+},
+"loungeSofa_NW": {
+"w": 104,
+"h": 99,
+"ax": 73.0,
+"ay": 99
+},
+"loungeSofaLong_SE": {
+"w": 131,
+"h": 103,
+"ax": 29.0,
+"ay": 103
+},
+"loungeSofaLong_SW": {
+"w": 103,
+"h": 121,
+"ax": 35.0,
+"ay": 121
+},
+"loungeSofaLong_NE": {
+"w": 131,
+"h": 99,
+"ax": 56.5,
+"ay": 99
+},
+"loungeSofaLong_NW": {
+"w": 104,
+"h": 110,
+"ax": 73.0,
+"ay": 110
+},
+"loungeChair_SE": {
+"w": 67,
+"h": 77,
+"ax": 29.0,
+"ay": 77
+},
+"loungeChair_SW": {
+"w": 66,
+"h": 77,
+"ax": 35.5,
+"ay": 77
+},
+"loungeChair_NE": {
+"w": 66,
+"h": 73,
+"ax": 28.0,
+"ay": 73
+},
+"loungeChair_NW": {
+"w": 67,
+"h": 73,
+"ax": 36.0,
+"ay": 73
+},
+"loungeChairRelax_SE": {
+"w": 78,
+"h": 97,
+"ax": 52.0,
+"ay": 97
+},
+"loungeChairRelax_SW": {
+"w": 77,
+"h": 96,
+"ax": 23.0,
+"ay": 96
+},
+"loungeChairRelax_NE": {
+"w": 77,
+"h": 73,
+"ax": 39.0,
+"ay": 73
+},
+"loungeChairRelax_NW": {
+"w": 77,
+"h": 73,
+"ax": 36.0,
+"ay": 73
+},
+"loungeSofaOttoman_SE": {
+"w": 68,
+"h": 63,
+"ax": 33.5,
+"ay": 63
+},
+"loungeSofaOttoman_SW": {
+"w": 67,
+"h": 63,
+"ax": 32.0,
+"ay": 63
+},
+"loungeSofaOttoman_NE": {
+"w": 68,
+"h": 63,
+"ax": 33.5,
+"ay": 63
+},
+"loungeSofaOttoman_NW": {
+"w": 68,
+"h": 63,
+"ax": 33.0,
+"ay": 63
+},
+"tableCoffee_SE": {
+"w": 80,
+"h": 74,
+"ax": 29.0,
+"ay": 74
+},
+"tableCoffee_SW": {
+"w": 80,
+"h": 74,
+"ax": 49.0,
+"ay": 74
+},
+"tableCoffee_NE": {
+"w": 81,
+"h": 74,
+"ax": 30.0,
+"ay": 74
+},
+"tableCoffee_NW": {
+"w": 81,
+"h": 74,
+"ax": 49.5,
+"ay": 74
+},
+"tableCoffeeGlass_SE": {
+"w": 80,
+"h": 74,
+"ax": 29.0,
+"ay": 74
+},
+"tableCoffeeGlass_SW": {
+"w": 80,
+"h": 74,
+"ax": 49.0,
+"ay": 74
+},
+"tableCoffeeGlass_NE": {
+"w": 81,
+"h": 74,
+"ax": 30.0,
+"ay": 74
+},
+"tableCoffeeGlass_NW": {
+"w": 81,
+"h": 74,
+"ax": 49.5,
+"ay": 74
+},
+"cabinetTelevision_SE": {
+"w": 80,
+"h": 79,
+"ax": 18.0,
+"ay": 79
+},
+"cabinetTelevision_SW": {
+"w": 80,
+"h": 80,
+"ax": 59.5,
+"ay": 80
+},
+"cabinetTelevision_NE": {
+"w": 79,
+"h": 79,
+"ax": 18.0,
+"ay": 79
+},
+"cabinetTelevision_NW": {
+"w": 79,
+"h": 79,
+"ax": 59.5,
+"ay": 79
+},
+"televisionModern_SE": {
+"w": 54,
+"h": 68,
+"ax": 1.5,
+"ay": 68
+},
+"televisionModern_SW": {
+"w": 55,
+"h": 68,
+"ax": 51.0,
+"ay": 68
+},
+"televisionModern_NE": {
+"w": 55,
+"h": 67,
+"ax": 10.5,
+"ay": 67
+},
+"televisionModern_NW": {
+"w": 54,
+"h": 67,
+"ax": 43.0,
+"ay": 67
+},
+"televisionVintage_SE": {
+"w": 46,
+"h": 53,
+"ax": 14.0,
+"ay": 53
+},
+"televisionVintage_SW": {
+"w": 46,
+"h": 53,
+"ax": 31.0,
+"ay": 53
+},
+"televisionVintage_NE": {
+"w": 47,
+"h": 53,
+"ax": 14.5,
+"ay": 53
+},
+"televisionVintage_NW": {
+"w": 46,
+"h": 53,
+"ax": 30.0,
+"ay": 53
+},
+"speaker_SE": {
+"w": 23,
+"h": 64,
+"ax": 10.0,
+"ay": 64
+},
+"speaker_SW": {
+"w": 23,
+"h": 64,
+"ax": 10.0,
+"ay": 64
+},
+"speaker_NE": {
+"w": 23,
+"h": 63,
+"ax": 10.0,
+"ay": 63
+},
+"speaker_NW": {
+"w": 22,
+"h": 63,
+"ax": 10.0,
+"ay": 63
+},
+"radio_SE": {
+"w": 31,
+"h": 36,
+"ax": 7.5,
+"ay": 36
+},
+"radio_SW": {
+"w": 30,
+"h": 36,
+"ax": 21.0,
+"ay": 36
+},
+"radio_NE": {
+"w": 30,
+"h": 36,
+"ax": 7.0,
+"ay": 36
+},
+"radio_NW": {
+"w": 31,
+"h": 36,
+"ax": 21.5,
+"ay": 36
+},
+"bookcaseOpen_SE": {
+"w": 50,
+"h": 101,
+"ax": 18.0,
+"ay": 101
+},
+"bookcaseOpen_SW": {
+"w": 49,
+"h": 101,
+"ax": 29.5,
+"ay": 101
+},
+"bookcaseOpen_NE": {
+"w": 49,
+"h": 101,
+"ax": 18.0,
+"ay": 101
+},
+"bookcaseOpen_NW": {
+"w": 49,
+"h": 101,
+"ax": 29.5,
+"ay": 101
+},
+"bookcaseClosedWide_SE": {
+"w": 80,
+"h": 115,
+"ax": 18.0,
+"ay": 115
+},
+"bookcaseClosedWide_SW": {
+"w": 80,
+"h": 116,
+"ax": 59.5,
+"ay": 116
+},
+"bookcaseClosedWide_NE": {
+"w": 79,
+"h": 116,
+"ax": 18.0,
+"ay": 116
+},
+"bookcaseClosedWide_NW": {
+"w": 79,
+"h": 115,
+"ax": 59.5,
+"ay": 115
+},
+"bookcaseOpenLow_SE": {
+"w": 50,
+"h": 65,
+"ax": 18.0,
+"ay": 65
+},
+"bookcaseOpenLow_SW": {
+"w": 49,
+"h": 65,
+"ax": 29.5,
+"ay": 65
+},
+"bookcaseOpenLow_NE": {
+"w": 49,
+"h": 65,
+"ax": 18.0,
+"ay": 65
+},
+"bookcaseOpenLow_NW": {
+"w": 49,
+"h": 64,
+"ax": 29.5,
+"ay": 64
+},
+"coatRackStanding_SE": {
+"w": 24,
+"h": 73,
+"ax": 10.0,
+"ay": 73
+},
+"coatRackStanding_SW": {
+"w": 24,
+"h": 73,
+"ax": 10.0,
+"ay": 73
+},
+"coatRackStanding_NE": {
+"w": 24,
+"h": 73,
+"ax": 10.0,
+"ay": 73
+},
+"coatRackStanding_NW": {
+"w": 24,
+"h": 73,
+"ax": 10.0,
+"ay": 73
+},
+"bedDouble_SE": {
+"w": 157,
+"h": 138,
+"ax": 86.0,
+"ay": 138
+},
+"bedDouble_SW": {
+"w": 157,
+"h": 138,
+"ax": 69.5,
+"ay": 138
+},
+"bedDouble_NE": {
+"w": 157,
+"h": 126,
+"ax": 86.0,
+"ay": 126
+},
+"bedDouble_NW": {
+"w": 157,
+"h": 126,
+"ax": 70.0,
+"ay": 126
+},
+"bedSingle_SE": {
+"w": 128,
+"h": 118,
+"ax": 86.0,
+"ay": 118
+},
+"bedSingle_SW": {
+"w": 128,
+"h": 118,
+"ax": 40.5,
+"ay": 118
+},
+"bedSingle_NE": {
+"w": 128,
+"h": 105,
+"ax": 86.0,
+"ay": 105
+},
+"bedSingle_NW": {
+"w": 128,
+"h": 105,
+"ax": 40.5,
+"ay": 105
+},
+"bedBunk_SE": {
+"w": 125,
+"h": 153,
+"ax": 81.0,
+"ay": 153
+},
+"bedBunk_SW": {
+"w": 126,
+"h": 153,
+"ax": 42.0,
+"ay": 153
+},
+"bedBunk_NE": {
+"w": 126,
+"h": 153,
+"ax": 82.0,
+"ay": 153
+},
+"bedBunk_NW": {
+"w": 125,
+"h": 152,
+"ax": 41.5,
+"ay": 152
+},
+"cabinetBedDrawerTable_SE": {
+"w": 37,
+"h": 44,
+"ax": 15.0,
+"ay": 44
+},
+"cabinetBedDrawerTable_SW": {
+"w": 36,
+"h": 44,
+"ax": 19.0,
+"ay": 44
+},
+"cabinetBedDrawerTable_NE": {
+"w": 37,
+"h": 45,
+"ax": 16.0,
+"ay": 45
+},
+"cabinetBedDrawerTable_NW": {
+"w": 37,
+"h": 45,
+"ax": 19.0,
+"ay": 45
+},
+"sideTable_SE": {
+"w": 58,
+"h": 68,
+"ax": 16.0,
+"ay": 68
+},
+"sideTable_SW": {
+"w": 57,
+"h": 69,
+"ax": 39.0,
+"ay": 69
+},
+"sideTable_NE": {
+"w": 57,
+"h": 68,
+"ax": 15.5,
+"ay": 68
+},
+"sideTable_NW": {
+"w": 57,
+"h": 68,
+"ax": 39.0,
+"ay": 68
+},
+"lampRoundTable_SE": {
+"w": 19,
+"h": 35,
+"ax": 8.0,
+"ay": 35
+},
+"lampRoundTable_SW": {
+"w": 19,
+"h": 35,
+"ax": 8.5,
+"ay": 35
+},
+"lampRoundTable_NE": {
+"w": 19,
+"h": 35,
+"ax": 8.0,
+"ay": 35
+},
+"lampRoundTable_NW": {
+"w": 18,
+"h": 35,
+"ax": 8.5,
+"ay": 35
+},
+"bear_SE": {
+"w": 38,
+"h": 39,
+"ax": 5.5,
+"ay": 39
+},
+"bear_SW": {
+"w": 38,
+"h": 40,
+"ax": 31.0,
+"ay": 40
+},
+"bear_NE": {
+"w": 37,
+"h": 41,
+"ax": 10.5,
+"ay": 41
+},
+"bear_NW": {
+"w": 37,
+"h": 41,
+"ax": 23.5,
+"ay": 41
+},
+"books_SE": {
+"w": 19,
+"h": 19,
+"ax": 5.0,
+"ay": 19
+},
+"books_SW": {
+"w": 18,
+"h": 20,
+"ax": 10.0,
+"ay": 20
+},
+"books_NE": {
+"w": 18,
+"h": 19,
+"ax": 6.0,
+"ay": 19
+},
+"books_NW": {
+"w": 17,
+"h": 20,
+"ax": 10.0,
+"ay": 20
+},
+"desk_SE": {
+"w": 85,
+"h": 88,
+"ax": 28.0,
+"ay": 88
+},
+"desk_SW": {
+"w": 85,
+"h": 88,
+"ax": 54.0,
+"ay": 88
+},
+"desk_NE": {
+"w": 85,
+"h": 88,
+"ax": 28.0,
+"ay": 88
+},
+"desk_NW": {
+"w": 85,
+"h": 88,
+"ax": 54.5,
+"ay": 88
+},
+"deskCorner_SE": {
+"w": 147,
+"h": 101,
+"ax": 72.0,
+"ay": 101
+},
+"deskCorner_SW": {
+"w": 103,
+"h": 132,
+"ax": 29.0,
+"ay": 132
+},
+"deskCorner_NE": {
+"w": 147,
+"h": 101,
+"ax": 72.0,
+"ay": 101
+},
+"deskCorner_NW": {
+"w": 103,
+"h": 132,
+"ax": 73.0,
+"ay": 132
+},
+"chairDesk_SE": {
+"w": 44,
+"h": 71,
+"ax": 16.5,
+"ay": 71
+},
+"chairDesk_SW": {
+"w": 45,
+"h": 70,
+"ax": 25.0,
+"ay": 70
+},
+"chairDesk_NE": {
+"w": 44,
+"h": 56,
+"ax": 22.5,
+"ay": 56
+},
+"chairDesk_NW": {
+"w": 44,
+"h": 56,
+"ax": 19.5,
+"ay": 56
+},
+"computerScreen_SE": {
+"w": 35,
+"h": 43,
+"ax": 8.1,
+"ay": 43
+},
+"computerScreen_SW": {
+"w": 35,
+"h": 43,
+"ax": 29.5,
+"ay": 43
+},
+"computerScreen_NE": {
+"w": 34,
+"h": 40,
+"ax": 4.2,
+"ay": 40
+},
+"computerScreen_NW": {
+"w": 34,
+"h": 40,
+"ax": 23.5,
+"ay": 40
+},
+"laptop_SE": {
+"w": 38,
+"h": 38,
+"ax": 17.0,
+"ay": 38
+},
+"laptop_SW": {
+"w": 37,
+"h": 38,
+"ax": 18.0,
+"ay": 38
+},
+"laptop_NE": {
+"w": 37,
+"h": 24,
+"ax": 11.5,
+"ay": 24
+},
+"laptop_NW": {
+"w": 37,
+"h": 24,
+"ax": 23.5,
+"ay": 24
+},
+"lampSquareFloor_SE": {
+"w": 19,
+"h": 78,
+"ax": 8.0,
+"ay": 78
+},
+"lampSquareFloor_SW": {
+"w": 19,
+"h": 78,
+"ax": 8.5,
+"ay": 78
+},
+"lampSquareFloor_NE": {
+"w": 19,
+"h": 78,
+"ax": 8.0,
+"ay": 78
+},
+"lampSquareFloor_NW": {
+"w": 18,
+"h": 78,
+"ax": 8.5,
+"ay": 78
+},
+"lampRoundFloor_SE": {
+"w": 19,
+"h": 76,
+"ax": 8.0,
+"ay": 76
+},
+"lampRoundFloor_SW": {
+"w": 19,
+"h": 76,
+"ax": 8.5,
+"ay": 76
+},
+"lampRoundFloor_NE": {
+"w": 19,
+"h": 76,
+"ax": 8.0,
+"ay": 76
+},
+"lampRoundFloor_NW": {
+"w": 18,
+"h": 76,
+"ax": 8.5,
+"ay": 76
+},
+"kitchenFridge_SE": {
+"w": 52,
+"h": 105,
+"ax": 17.0,
+"ay": 105
+},
+"kitchenFridge_SW": {
+"w": 52,
+"h": 105,
+"ax": 33.0,
+"ay": 105
+},
+"kitchenFridge_NE": {
+"w": 53,
+"h": 106,
+"ax": 19.0,
+"ay": 106
+},
+"kitchenFridge_NW": {
+"w": 53,
+"h": 106,
+"ax": 32.0,
+"ay": 106
+},
+"kitchenStove_SE": {
+"w": 67,
+"h": 79,
+"ax": 30.0,
+"ay": 79
+},
+"kitchenStove_SW": {
+"w": 67,
+"h": 79,
+"ax": 35.0,
+"ay": 79
+},
+"kitchenStove_NE": {
+"w": 66,
+"h": 79,
+"ax": 33.0,
+"ay": 79
+},
+"kitchenStove_NW": {
+"w": 66,
+"h": 79,
+"ax": 31.0,
+"ay": 79
+},
+"kitchenSink_SE": {
+"w": 67,
+"h": 79,
+"ax": 30.0,
+"ay": 79
+},
+"kitchenSink_SW": {
+"w": 67,
+"h": 79,
+"ax": 35.0,
+"ay": 79
+},
+"kitchenSink_NE": {
+"w": 66,
+"h": 79,
+"ax": 33.0,
+"ay": 79
+},
+"kitchenSink_NW": {
+"w": 66,
+"h": 79,
+"ax": 31.0,
+"ay": 79
+},
+"kitchenCabinet_SE": {
+"w": 67,
+"h": 79,
+"ax": 30.0,
+"ay": 79
+},
+"kitchenCabinet_SW": {
+"w": 67,
+"h": 79,
+"ax": 35.0,
+"ay": 79
+},
+"kitchenCabinet_NE": {
+"w": 66,
+"h": 79,
+"ax": 33.0,
+"ay": 79
+},
+"kitchenCabinet_NW": {
+"w": 66,
+"h": 79,
+"ax": 31.0,
+"ay": 79
+},
+"kitchenCabinetDrawer_SE": {
+"w": 56,
+"h": 70,
+"ax": 22.0,
+"ay": 70
+},
+"kitchenCabinetDrawer_SW": {
+"w": 56,
+"h": 70,
+"ax": 32.0,
+"ay": 70
+},
+"kitchenCabinetDrawer_NE": {
+"w": 55,
+"h": 70,
+"ax": 21.5,
+"ay": 70
+},
+"kitchenCabinetDrawer_NW": {
+"w": 55,
+"h": 70,
+"ax": 31.5,
+"ay": 70
+},
+"kitchenMicrowave_SE": {
+"w": 37,
+"h": 40,
+"ax": 14.0,
+"ay": 40
+},
+"kitchenMicrowave_SW": {
+"w": 37,
+"h": 39,
+"ax": 22.0,
+"ay": 39
+},
+"kitchenMicrowave_NE": {
+"w": 37,
+"h": 40,
+"ax": 13.5,
+"ay": 40
+},
+"kitchenMicrowave_NW": {
+"w": 37,
+"h": 39,
+"ax": 21.0,
+"ay": 39
+},
+"kitchenCoffeeMachine_SE": {
+"w": 26,
+"h": 32,
+"ax": 15.0,
+"ay": 32
+},
+"kitchenCoffeeMachine_SW": {
+"w": 25,
+"h": 32,
+"ax": 8.5,
+"ay": 32
+},
+"kitchenCoffeeMachine_NE": {
+"w": 26,
+"h": 27,
+"ax": 17.0,
+"ay": 27
+},
+"kitchenCoffeeMachine_NW": {
+"w": 26,
+"h": 27,
+"ax": 7.5,
+"ay": 27
+},
+"kitchenBlender_SE": {
+"w": 12,
+"h": 24,
+"ax": 4.5,
+"ay": 24
+},
+"kitchenBlender_SW": {
+"w": 12,
+"h": 25,
+"ax": 5.5,
+"ay": 25
+},
+"kitchenBlender_NE": {
+"w": 13,
+"h": 25,
+"ax": 6.0,
+"ay": 25
+},
+"kitchenBlender_NW": {
+"w": 13,
+"h": 25,
+"ax": 5.5,
+"ay": 25
+},
+"table_SE": {
+"w": 98,
+"h": 93,
+"ax": 33.0,
+"ay": 93
+},
+"table_SW": {
+"w": 98,
+"h": 93,
+"ax": 63.0,
+"ay": 93
+},
+"table_NE": {
+"w": 97,
+"h": 94,
+"ax": 32.5,
+"ay": 94
+},
+"table_NW": {
+"w": 97,
+"h": 93,
+"ax": 62.0,
+"ay": 93
+},
+"tableRound_SE": {
+"w": 83,
+"h": 69,
+"ax": 40.0,
+"ay": 69
+},
+"tableRound_SW": {
+"w": 83,
+"h": 68,
+"ax": 40.5,
+"ay": 68
+},
+"tableRound_NE": {
+"w": 83,
+"h": 69,
+"ax": 40.0,
+"ay": 69
+},
+"tableRound_NW": {
+"w": 82,
+"h": 69,
+"ax": 40.0,
+"ay": 69
+},
+"chair_SE": {
+"w": 31,
+"h": 57,
+"ax": 14.0,
+"ay": 57
+},
+"chair_SW": {
+"w": 31,
+"h": 57,
+"ax": 14.5,
+"ay": 57
+},
+"chair_NE": {
+"w": 31,
+"h": 49,
+"ax": 14.0,
+"ay": 49
+},
+"chair_NW": {
+"w": 30,
+"h": 49,
+"ax": 14.0,
+"ay": 49
+},
+"chairCushion_SE": {
+"w": 31,
+"h": 56,
+"ax": 14.0,
+"ay": 56
+},
+"chairCushion_SW": {
+"w": 31,
+"h": 56,
+"ax": 14.5,
+"ay": 56
+},
+"chairCushion_NE": {
+"w": 31,
+"h": 48,
+"ax": 14.0,
+"ay": 48
+},
+"chairCushion_NW": {
+"w": 30,
+"h": 48,
+"ax": 14.0,
+"ay": 48
+},
+"stoolBar_SE": {
+"w": 27,
+"h": 49,
+"ax": 12.5,
+"ay": 49
+},
+"stoolBar_SW": {
+"w": 28,
+"h": 49,
+"ax": 13.0,
+"ay": 49
+},
+"stoolBar_NE": {
+"w": 28,
+"h": 48,
+"ax": 12.5,
+"ay": 48
+},
+"stoolBar_NW": {
+"w": 27,
+"h": 48,
+"ax": 13.0,
+"ay": 48
+},
+"kitchenBar_SE": {
+"w": 49,
+"h": 64,
+"ax": 12.0,
+"ay": 64
+},
+"kitchenBar_SW": {
+"w": 49,
+"h": 64,
+"ax": 35.0,
+"ay": 64
+},
+"kitchenBar_NE": {
+"w": 48,
+"h": 64,
+"ax": 11.5,
+"ay": 64
+},
+"kitchenBar_NW": {
+"w": 48,
+"h": 64,
+"ax": 34.5,
+"ay": 64
+},
+"bathtub_SE": {
+"w": 130,
+"h": 118,
+"ax": 40.5,
+"ay": 118
+},
+"bathtub_SW": {
+"w": 130,
+"h": 118,
+"ax": 88.0,
+"ay": 118
+},
+"bathtub_NE": {
+"w": 129,
+"h": 119,
+"ax": 39.5,
+"ay": 119
+},
+"bathtub_NW": {
+"w": 130,
+"h": 118,
+"ax": 88.0,
+"ay": 118
+},
+"toilet_SE": {
+"w": 54,
+"h": 70,
+"ax": 40.0,
+"ay": 70
+},
+"toilet_SW": {
+"w": 54,
+"h": 71,
+"ax": 12.0,
+"ay": 71
+},
+"toilet_NE": {
+"w": 54,
+"h": 44,
+"ax": 27.0,
+"ay": 44
+},
+"toilet_NW": {
+"w": 54,
+"h": 45,
+"ax": 24.5,
+"ay": 45
+},
+"bathroomSink_SE": {
+"w": 43,
+"h": 59,
+"ax": 16.0,
+"ay": 59
+},
+"bathroomSink_SW": {
+"w": 43,
+"h": 59,
+"ax": 24.5,
+"ay": 59
+},
+"bathroomSink_NE": {
+"w": 42,
+"h": 63,
+"ax": 21.0,
+"ay": 63
+},
+"bathroomSink_NW": {
+"w": 42,
+"h": 63,
+"ax": 18.5,
+"ay": 63
+},
+"shower_SE": {
+"w": 85,
+"h": 142,
+"ax": 42.0,
+"ay": 142
+},
+"shower_SW": {
+"w": 85,
+"h": 143,
+"ax": 41.0,
+"ay": 143
+},
+"shower_NE": {
+"w": 85,
+"h": 142,
+"ax": 41.5,
+"ay": 142
+},
+"shower_NW": {
+"w": 85,
+"h": 143,
+"ax": 41.0,
+"ay": 143
+},
+"washer_SE": {
+"w": 56,
+"h": 74,
+"ax": 24.0,
+"ay": 74
+},
+"washer_SW": {
+"w": 56,
+"h": 74,
+"ax": 30.0,
+"ay": 74
+},
+"washer_NE": {
+"w": 56,
+"h": 74,
+"ax": 25.5,
+"ay": 74
+},
+"washer_NW": {
+"w": 56,
+"h": 74,
+"ax": 29.0,
+"ay": 74
+},
+"dryer_SE": {
+"w": 56,
+"h": 74,
+"ax": 24.0,
+"ay": 74
+},
+"dryer_SW": {
+"w": 56,
+"h": 74,
+"ax": 30.0,
+"ay": 74
+},
+"dryer_NE": {
+"w": 56,
+"h": 74,
+"ax": 25.5,
+"ay": 74
+},
+"dryer_NW": {
+"w": 56,
+"h": 74,
+"ax": 29.0,
+"ay": 74
+},
+"pottedPlant_SE": {
+"w": 21,
+"h": 60,
+"ax": 10.0,
+"ay": 60
+},
+"pottedPlant_SW": {
+"w": 21,
+"h": 60,
+"ax": 8.5,
+"ay": 60
+},
+"pottedPlant_NE": {
+"w": 21,
+"h": 61,
+"ax": 10.0,
+"ay": 61
+},
+"pottedPlant_NW": {
+"w": 21,
+"h": 61,
+"ax": 9.0,
+"ay": 61
+},
+"plantSmall1_SE": {
+"w": 11,
+"h": 14,
+"ax": 4.5,
+"ay": 14
+},
+"plantSmall1_SW": {
+"w": 9,
+"h": 14,
+"ax": 3.0,
+"ay": 14
+},
+"plantSmall1_NE": {
+"w": 10,
+"h": 14,
+"ax": 4.5,
+"ay": 14
+},
+"plantSmall1_NW": {
+"w": 9,
+"h": 14,
+"ax": 3.0,
+"ay": 14
+},
+"plantSmall2_SE": {
+"w": 11,
+"h": 14,
+"ax": 4.5,
+"ay": 14
+},
+"plantSmall2_SW": {
+"w": 9,
+"h": 14,
+"ax": 3.0,
+"ay": 14
+},
+"plantSmall2_NE": {
+"w": 10,
+"h": 14,
+"ax": 4.5,
+"ay": 14
+},
+"plantSmall2_NW": {
+"w": 9,
+"h": 14,
+"ax": 3.0,
+"ay": 14
+},
+"plantSmall3_SE": {
+"w": 10,
+"h": 15,
+"ax": 4.0,
+"ay": 15
+},
+"plantSmall3_SW": {
+"w": 10,
+"h": 15,
+"ax": 4.0,
+"ay": 15
+},
+"plantSmall3_NE": {
+"w": 10,
+"h": 14,
+"ax": 4.0,
+"ay": 14
+},
+"plantSmall3_NW": {
+"w": 10,
+"h": 14,
+"ax": 4.0,
+"ay": 14
+},
+"cardboardBoxClosed_SE": {
+"w": 32,
+"h": 39,
+"ax": 15.0,
+"ay": 39
+},
+"cardboardBoxClosed_SW": {
+"w": 33,
+"h": 40,
+"ax": 15.5,
+"ay": 40
+},
+"cardboardBoxClosed_NE": {
+"w": 32,
+"h": 40,
+"ax": 15.5,
+"ay": 40
+},
+"cardboardBoxClosed_NW": {
+"w": 32,
+"h": 40,
+"ax": 15.0,
+"ay": 40
+},
+"cardboardBoxOpen_SE": {
+"w": 44,
+"h": 48,
+"ax": 21.0,
+"ay": 48
+},
+"cardboardBoxOpen_SW": {
+"w": 44,
+"h": 49,
+"ax": 21.5,
+"ay": 49
+},
+"cardboardBoxOpen_NE": {
+"w": 45,
+"h": 48,
+"ax": 21.5,
+"ay": 48
+},
+"cardboardBoxOpen_NW": {
+"w": 44,
+"h": 49,
+"ax": 21.0,
+"ay": 49
+},
+"trashcan_SE": {
+"w": 25,
+"h": 46,
+"ax": 15.5,
+"ay": 46
+},
+"trashcan_SW": {
+"w": 25,
+"h": 46,
+"ax": 7.5,
+"ay": 46
+},
+"trashcan_NE": {
+"w": 25,
+"h": 45,
+"ax": 12.5,
+"ay": 45
+},
+"trashcan_NW": {
+"w": 25,
+"h": 45,
+"ax": 11.0,
+"ay": 45
+},
+"bench_SE": {
+"w": 46,
+"h": 67,
+"ax": 14.0,
+"ay": 67
+},
+"bench_SW": {
+"w": 46,
+"h": 67,
+"ax": 29.5,
+"ay": 67
+},
+"bench_NE": {
+"w": 46,
+"h": 59,
+"ax": 14.0,
+"ay": 59
+},
+"bench_NW": {
+"w": 45,
+"h": 59,
+"ax": 29.0,
+"ay": 59
+},
+"rugRectangle_SE": {
+"w": 188,
+"h": 134,
+"ax": 68.0,
+"ay": 134
+},
+"rugRectangle_SW": {
+"w": 188,
+"h": 134,
+"ax": 117.5,
+"ay": 134
+},
+"rugRectangle_NE": {
+"w": 188,
+"h": 134,
+"ax": 68.0,
+"ay": 134
+},
+"rugRectangle_NW": {
+"w": 188,
+"h": 133,
+"ax": 118.0,
+"ay": 133
+},
+"rugRound_SE": {
+"w": 99,
+"h": 71,
+"ax": 48.0,
+"ay": 71
+},
+"rugRound_SW": {
+"w": 99,
+"h": 70,
+"ax": 48.5,
+"ay": 70
+},
+"rugRound_NE": {
+"w": 99,
+"h": 70,
+"ax": 48.0,
+"ay": 70
+},
+"rugRound_NW": {
+"w": 98,
+"h": 70,
+"ax": 47.5,
+"ay": 70
+},
+"rugRounded_SE": {
+"w": 148,
+"h": 105,
+"ax": 48.0,
+"ay": 105
+},
+"rugRounded_SW": {
+"w": 148,
+"h": 105,
+"ax": 97.5,
+"ay": 105
+},
+"rugRounded_NE": {
+"w": 148,
+"h": 105,
+"ax": 48.5,
+"ay": 105
+},
+"rugRounded_NW": {
+"w": 147,
+"h": 105,
+"ax": 96.5,
+"ay": 105
+},
+"rugSquare_SE": {
+"w": 138,
+"h": 98,
+"ax": 68.0,
+"ay": 98
+},
+"rugSquare_SW": {
+"w": 138,
+"h": 98,
+"ax": 67.5,
+"ay": 98
+},
+"rugSquare_NE": {
+"w": 138,
+"h": 98,
+"ax": 68.5,
+"ay": 98
+},
+"rugSquare_NW": {
+"w": 138,
+"h": 98,
+"ax": 68.0,
+"ay": 98
+},
+"wall_SE": {
+"w": 80,
+"h": 153,
+"ax": 3.0,
+"ay": 153
+},
+"wall_SW": {
+"w": 80,
+"h": 154,
+"ax": 74.5,
+"ay": 154
+},
+"wall_NE": {
+"w": 79,
+"h": 153,
+"ax": 2.5,
+"ay": 153
+},
+"wall_NW": {
+"w": 79,
+"h": 154,
+"ax": 74.5,
+"ay": 154
+},
+"wallWindow_SE": {
+"w": 80,
+"h": 153,
+"ax": 3.0,
+"ay": 153
+},
+"wallWindow_SW": {
+"w": 80,
+"h": 154,
+"ax": 74.5,
+"ay": 154
+},
+"wallWindow_NE": {
+"w": 79,
+"h": 153,
+"ax": 2.5,
+"ay": 153
+},
+"wallWindow_NW": {
+"w": 79,
+"h": 154,
+"ax": 74.5,
+"ay": 154
+}
 }

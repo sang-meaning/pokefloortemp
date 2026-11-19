@@ -59,7 +59,6 @@ html, body {
   pointer-events: none;   /* 가구 뒤에 있는 포켓몬도 클릭 가능하게 */
   user-select: none;
 }
-body.pixel .furniture img { image-rendering: pixelated; }
 
 .mon { cursor: pointer; }
 .mon .shadow {
@@ -173,3 +172,54 @@ body.pixel .furniture img { image-rendering: pixelated; }
 
 .info-actions { display: flex; gap: 6px; margin-top: 12px; }
 .info-actions .btn.ghost { background: #e6dfcf; color: #333; }
+
+/* ---------- 배경 편집 모드 ---------- */
+body.editing .mon { opacity: .25; pointer-events: none; }
+body.editing .mon * { pointer-events: none !important; }
+body.editing .furniture img { pointer-events: auto; cursor: grab; }
+body.editing #viewport { background: repeating-linear-gradient(45deg, #1b1f2a 0 14px, #1e2330 14px 28px); }
+.furniture.sel img { filter: drop-shadow(0 0 2px #4f7cff) drop-shadow(0 0 4px #4f7cff); }
+.furniture.invalid img, .furniture.ghost.invalid img { filter: drop-shadow(0 0 3px #ff5252) sepia(1) saturate(4) hue-rotate(-40deg); opacity: .8; }
+.furniture.ghost img { opacity: .65; pointer-events: none !important; }
+.furniture.ghost { z-index: 99999 !important; }
+.hidden-ghost { display: none; }
+#edit-btn.on { background: #3fa15a; color: #fff; }
+
+#palette {
+  position: fixed; left: 20px; top: 64px; bottom: 20px; width: 290px;
+  display: flex; flex-direction: column;
+  background: #f7f4ea; color: #2a2a2a; border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.45); z-index: 30; overflow: hidden;
+}
+.pal-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 12px 8px; }
+.pal-tabs button {
+  border: 1px solid #e0d6c4; background: #fff; border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; cursor: pointer;
+}
+.pal-tabs button.on { background: #2f3a55; color: #fff; border-color: #2f3a55; }
+.pal-list { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 0 12px 12px; align-content: start; }
+.pal-item {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px;
+  background: #fff; border: 2px solid #ece4d4; border-radius: 10px; cursor: pointer; font: inherit;
+}
+.pal-item:hover { border-color: #b9c6e8; }
+.pal-item.on { border-color: #4f7cff; background: #eef2ff; }
+.pal-item img { width: 64px; height: 56px; object-fit: contain; }
+.pal-item span { font-size: 11px; text-align: center; line-height: 1.2; }
+.pal-item small { color: #4f7cff; }
+.pal-foot { padding: 8px 12px 12px; border-top: 1px solid #ece4d4; }
+.pal-foot .btn.ghost { background: #e6dfcf; color: #333; }
+
+.edit-toolbar {
+  position: fixed; left: 50%; top: 60px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px 8px 16px; border-radius: 12px;
+  background: rgba(15, 18, 26, .92); border: 1px solid #323a4d; z-index: 40;
+  font-size: 13px; max-width: calc(100vw - 680px); min-width: 320px;
+}
+.edit-toolbar .et-name { flex: 1; color: #dfe5f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.edit-flash {
+  position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%) translateY(20px);
+  background: rgba(15,18,26,.92); color: #fff; padding: 8px 16px; border-radius: 999px; font-size: 13px;
+  opacity: 0; transition: .2s; pointer-events: none; z-index: 60;
+}
+.edit-flash.show { opacity: 1; transform: translateX(-50%); }

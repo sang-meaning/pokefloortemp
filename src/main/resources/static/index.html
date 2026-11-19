@@ -21,6 +21,22 @@
     <div class="room-hint">포켓몬을 클릭해 보세요 · 휠로 확대/축소 · 드래그로 이동</div>
   </main>
 
+  <aside id="palette" class="hidden">
+    <div class="bag-head"><strong>🛠 가구 놓기</strong></div>
+    <p class="bag-sub">가구를 고르고 바닥을 클릭하세요. 놓인 가구는 끌어서 옮기고, R로 돌리고, Delete로 지워요.</p>
+    <div id="palette-tabs" class="pal-tabs"></div>
+    <div id="palette-list" class="pal-list"></div>
+    <div class="pal-foot"><button id="palette-reset" class="btn small ghost">↺ 기본 배치로</button></div>
+  </aside>
+
+  <div id="edit-toolbar" class="edit-toolbar hidden">
+    <span class="et-name"></span>
+    <button id="et-rotate" class="btn small ghost" data-need-sel title="R">⟳ 회전</button>
+    <button id="et-delete" class="btn small danger" data-need-sel title="Delete">🗑 삭제</button>
+    <button id="et-done" class="btn small">완료</button>
+  </div>
+  <div id="edit-flash" class="edit-flash"></div>
+
   <aside id="bag" class="hidden">
     <div class="bag-head">
       <strong>🎒 내 포켓몬</strong>
@@ -49,7 +65,9 @@
   </aside>
 
   <script src="/common.js"></script>
+  <script src="/catalog.js"></script>
   <script src="/app.js"></script>
   <script src="/room.js"></script>
+  <script src="/editor.js"></script>
 </body>
 </html>

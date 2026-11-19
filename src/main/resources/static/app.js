@@ -19,14 +19,11 @@ const RAIL_H = 14;                   // 방 사이 유리 칸막이 높이
 const SLAB = 16;                     // 바닥 두께
 const MARGIN = 40;
 const MON_SCALE = 1.5;               // 포켓몬 스프라이트 확대 배율
-// 그림 스타일: 기본 = 원본 Kenney 렌더(smooth), ?style=pixel 로 도트 변환판과 비교
 const PARAMS = new URLSearchParams(location.search);
-const STYLE = PARAMS.get('style') === 'pixel' ? 'pixel' : 'smooth';
 // 포켓몬 이미지: 기본 = 움직이는 GIF, ?mon=home 이면 고해상도 HOME 3D 렌더(정지 이미지 + 코드 애니메이션)
 const MON_MODE = PARAMS.get('mon') === 'home' ? 'home' : 'gif';
-const PX = 2;                        // 도트 1개 = 화면 2px (바닥·벽·가구 공통)
-const ASSET = STYLE === 'pixel' ? '/assets/kenney-pixel/' : '/assets/kenney/';
-const SPR = STYLE === 'pixel' ? PX : KS;   // manifest 좌표 → 화면 px 배율
+const ASSET = '/assets/kenney/';
+const SPR = KS;                      // manifest 좌표 → 화면 px 배율
 
 /* ---------- 방(박스) 정의: 나중에 DB에서 받아올 부분 ---------- */
 const ROOMS = [
@@ -47,53 +44,8 @@ const DOORS = [
 // 바깥 벽 중 창문이 있는 칸 (벽 이미지 1장 = 타일 2칸, 시작 타일 번호로 지정)
 const WINDOWS = { north: [2, 10], west: [2, 8] };
 
-/* 가구 (Kenney Furniture Kit, CC0)
- *  sprite : assets/kenney/ 의 파일명 (방향 _SE/_SW/_NE/_NW)
- *  x, y   : 놓을 타일 (큰 가구는 이 타일에서 오른쪽/아래로 차지)
- *  snap   : 'N' = 뒤쪽(북쪽) 벽에 붙이기, 'W' = 왼쪽(서쪽) 벽에 붙이기
- *  flat   : 바닥 깔개(러그) → 위로 걸어다닐 수 있고 항상 맨 아래
- *  lift   : 다른 가구 위에 올릴 때 높이(px, 원본 기준)
- *  name   : 가구 이름 */
-const FURNITURE = [
-  // A 연구실
-  { sprite: 'bookcaseOpen_SW',        x: 1,  y: 0, snap: 'N', name: '책장' },
-  { sprite: 'bookcaseClosedWide_SW',  x: 2,  y: 0, snap: 'N', name: '책장' },
-  { sprite: 'pottedPlant_SW',         x: 6,  y: 0, snap: 'N', name: '화분' },
-  { sprite: 'desk_SE',                x: 0,  y: 2, snap: 'W', name: '책상' },
-  { sprite: 'computerScreen_SE',      x: 0,  y: 2, snap: 'W', lift: 46, name: '모니터' },
-  { sprite: 'chairDesk_NW',           x: 2,  y: 2, name: '의자' },
-  { sprite: 'lampRoundFloor_SE',      x: 0,  y: 5, snap: 'W', name: '스탠드' },
-
-  // B 거실
-  { sprite: 'rugRectangle_SW',        x: 9,  y: 2, flat: true, name: '러그' },
-  { sprite: 'loungeSofa_SW',          x: 9,  y: 0, snap: 'N', name: '소파' },
-  { sprite: 'tableCoffee_SW',         x: 9,  y: 2, name: '커피 테이블' },
-  { sprite: 'cabinetTelevision_NE',   x: 9,  y: 4, name: 'TV 장' },
-  { sprite: 'televisionModern_NE',    x: 9,  y: 4, lift: 30, name: 'TV' },
-  { sprite: 'loungeChair_SE',         x: 7,  y: 1, name: '라운지 체어' },
-  { sprite: 'lampRoundFloor_SW',      x: 12, y: 0, snap: 'N', name: '스탠드' },
-  { sprite: 'pottedPlant_SW',         x: 13, y: 0, snap: 'N', name: '화분' },
-
-  // C 침실
-  { sprite: 'rugRound_SE',            x: 3,  y: 9, flat: true, name: '러그' },
-  { sprite: 'bedDouble_SE',           x: 0,  y: 7, snap: 'W', name: '침대' },
-  { sprite: 'cabinetBedDrawerTable_SE', x: 0, y: 6, snap: 'W', name: '협탁' },
-  { sprite: 'bookcaseOpenLow_SE',     x: 0,  y: 10, snap: 'W', name: '낮은 책장' },
-  { sprite: 'bear_SE',                x: 4,  y: 10, name: '곰인형' },
-  { sprite: 'pottedPlant_SE',         x: 6,  y: 11, name: '화분' },
-
-  // D 부엌 (뒤쪽 유리벽에 붙여서)
-  { sprite: 'kitchenFridge_SW',       x: 7,  y: 6, snap: 'N', name: '냉장고' },
-  { sprite: 'kitchenStove_SW',        x: 8,  y: 6, snap: 'N', name: '가스레인지' },
-  { sprite: 'kitchenSink_SW',         x: 9,  y: 6, snap: 'N', name: '싱크대' },
-  { sprite: 'kitchenCabinet_SW',      x: 10, y: 6, snap: 'N', name: '수납장' },
-  { sprite: 'tableRound_SE',          x: 9,  y: 9, name: '식탁' },
-  { sprite: 'chair_SW',               x: 9,  y: 8, name: '의자' },
-  { sprite: 'chair_NE',               x: 9,  y: 10, name: '의자' },
-  { sprite: 'cardboardBoxClosed_SE',  x: 13, y: 11, name: '상자' },
-  { sprite: 'cardboardBoxOpen_SE',    x: 12, y: 11, name: '상자' },
-  { sprite: 'trashcan_SE',            x: 13, y: 8, name: '휴지통' },
-];
+// 가구 배치는 DB 에 저장 (/api/furniture). 기본 배치는 서버의 FurnitureService.DEFAULT_LAYOUT
+// 고를 수 있는 가구 목록은 catalog.js
 
 /* ---------- 격자 계산 ---------- */
 const GRID_W = Math.max(...ROOMS.map(r => r.x + r.w));
@@ -107,7 +59,7 @@ const iso = (x, y) => ({ sx: (x - y) * TW / 2 + OX, sy: (x + y) * TH / 2 + OY })
 const key = (x, y) => `${x},${y}`;
 
 const roomAt = (x, y) => ROOMS.find(r => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h);
-const blocked = new Set(FURNITURE.filter(f => !f.flat).map(f => key(f.x, f.y)));
+const blocked = new Set();   // 가구가 차지한 타일 (rebuildBlocked 로 갱신)
 const doorSet = new Set();
 DOORS.forEach(([a, b]) => {
   doorSet.add(`${key(...a)}|${key(...b)}`);
@@ -127,17 +79,8 @@ const isDoorEdge = (x1, y1, x2, y2) => doorSet.has(`${key(x1, y1)}|${key(x2, y2)
 /* ---------- 배경(바닥 + 벽) 그리기 ---------- */
 const floorCanvas = document.getElementById('floor');
 const ctx = floorCanvas.getContext('2d');
-if (STYLE === 'pixel') {
-  // 낮은 해상도로 그린 뒤 CSS로 확대 → 바닥/벽도 도트처럼 보임
-  floorCanvas.width = Math.ceil(STAGE_W / PX);
-  floorCanvas.height = Math.ceil(STAGE_H / PX);
-  ctx.setTransform(1 / PX, 0, 0, 1 / PX, 0, 0);
-  ctx.imageSmoothingEnabled = false;
-  document.body.classList.add('pixel');
-} else {
-  floorCanvas.width = STAGE_W;
-  floorCanvas.height = STAGE_H;
-}
+floorCanvas.width = STAGE_W;
+floorCanvas.height = STAGE_H;
 floorCanvas.style.width = `${STAGE_W}px`;
 floorCanvas.style.height = `${STAGE_H}px`;
 
@@ -251,46 +194,79 @@ function placeEntity(el, px, py) {
   el.style.zIndex = zIndexOf(px + py);
 }
 
-function createFurniture(f) {
-  const m = MANIFEST[f.sprite];
-  if (!m) { console.warn('에셋 없음', f.sprite); return; }
+/* ---------- 가구 ---------- */
+let furniture = [];   // { id, sprite, x, y, lift, el }
 
-  // 이미지 폭으로 물체의 바닥 크기(타일 단위)를 추정: 앞 꼭짓점 기준 왼쪽 = x축, 오른쪽 = y축
+/**
+ * 가구가 바닥에서 차지하는 영역 계산
+ *  - 이미지 폭으로 바닥 크기(타일 단위)를 추정: 앞 꼭짓점 기준 왼쪽 = x축, 오른쪽 = y축
+ *  - 방의 뒤쪽 벽(북쪽·서쪽)에 붙은 칸이고 벽을 등지는 방향이면 벽에 딱 붙임
+ *  - tiles: 지나갈 수 없게 막는 타일 (러그·얹힌 소품은 막지 않음)
+ */
+function footprint(f) {
+  const m = MANIFEST[f.sprite];
+  if (!m) return null;
   const perTile = (TW / 2) / SPR;             // 이미지에서 타일 1칸의 반폭(px)
   const fw = Math.min(2, m.ax / perTile);
   const fh = Math.min(2, (m.w - m.ax) / perTile);
+  const room = roomAt(f.x, f.y);
+  const dir = dirOf(f.sprite);
 
-  // 기본은 타일 중앙, snap 이면 벽 쪽으로 붙임
   let cx = f.x + 0.5, cy = f.y + 0.5;
-  if (f.snap === 'N') cy = f.y + fh / 2 + 0.03;
-  if (f.snap === 'W') cx = f.x + fw / 2 + 0.03;
+  if (room && dir === 'SW' && f.y === room.y) cy = f.y + fh / 2 + 0.03;   // 뒤쪽(북쪽) 벽에 붙이기
+  if (room && dir === 'SE' && f.x === room.x) cx = f.x + fw / 2 + 0.03;   // 왼쪽(서쪽) 벽에 붙이기
 
-  // 큰 가구는 여러 칸 차지 → 겹치는 타일 모두 통행 불가
-  if (!f.flat) {
+  const tiles = [];
+  if (!catalogOf(f.sprite).flat && !f.lift) {
     for (let ty = Math.floor(cy - fh / 2 + 0.15); ty <= Math.floor(cy + fh / 2 - 0.15); ty++) {
       for (let tx = Math.floor(cx - fw / 2 + 0.15); tx <= Math.floor(cx + fw / 2 - 0.15); tx++) {
-        blocked.add(key(tx, ty));
+        tiles.push([tx, ty]);
       }
     }
   }
+  return { cx, cy, fw, fh, tiles, m };
+}
 
+function rebuildBlocked() {
+  blocked.clear();
+  furniture.forEach(f => footprint(f)?.tiles.forEach(([x, y]) => blocked.add(key(x, y))));
+}
+
+/** 가구 요소를 만들거나(el 없을 때) 위치·모양을 갱신 */
+function renderFurniture(f, el = f.el) {
+  const fp = footprint(f);
+  if (!fp) { console.warn('에셋 없음', f.sprite); return null; }
+  const { cx, cy, fw, fh, m } = fp;
   const front = iso(cx + fw / 2, cy + fh / 2);   // 물체 바닥의 앞 꼭짓점
   const lift = (f.lift || 0) * KS;
 
-  const el = document.createElement('div');
-  el.className = 'entity furniture';
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'entity furniture';
+    el.appendChild(document.createElement('img'));
+    entitiesEl.appendChild(el);
+  }
   el.style.left = `${front.sx}px`;
   el.style.top = `${front.sy}px`;
-  el.style.zIndex = f.flat ? 1 : zIndexOf(cx + cy + (f.lift ? 0.01 : 0));
-
-  const img = document.createElement('img');
-  img.src = `${ASSET}${f.sprite}.png`;
-  img.alt = f.name;
+  el.style.zIndex = catalogOf(f.sprite).flat ? 1 : zIndexOf(cx + cy + (f.lift ? 0.01 : 0));
+  const img = el.firstChild;
+  if (!img.src.endsWith(`/${f.sprite}.png`)) img.src = `${ASSET}${f.sprite}.png`;
+  img.alt = catalogOf(f.sprite).name;
   img.style.left = `${-m.ax * SPR}px`;
   img.style.top = `${-m.ay * SPR - lift}px`;
   img.style.width = `${m.w * SPR}px`;
-  el.appendChild(img);
-  entitiesEl.appendChild(el);
+  return el;
+}
+
+async function loadFurniture() {
+  try {
+    furniture = await api('/api/furniture');
+  } catch (err) {
+    console.error('가구 불러오기 실패', err);
+    furniture = [];
+  }
+  furniture.forEach(f => { f.el = renderFurniture(f); });
+  rebuildBlocked();
 }
 
 /* ---------- 포켓몬 ---------- */
@@ -557,11 +533,13 @@ function randomFreeTile() {
 async function main() {
   await loadAssets();
   drawBackground();
-  FURNITURE.forEach(createFurniture);
+  await loadFurniture();
   fitView();
 
   // 내가 획득해서 방에 꺼내 둔 포켓몬 (room.js)
   await initRoom();
+  // 배경 편집 모드 (editor.js)
+  if (typeof initEditor === 'function') initEditor();
 
   let last = performance.now();
   function loop(now) {
