@@ -94,7 +94,8 @@ function renderBag() {
 function renderMonTab() {
   const placed = collection.filter(o => o.placed).length;
   document.getElementById('bag-sub').textContent =
-    `획득 ${collection.length}마리 · 박스에 ${placed}마리 · 인벤토리 ${collection.length - placed}마리`;
+    `획득 ${collection.length}마리 · 박스에 ${placed}마리 · 인벤토리 ${collection.length - placed}마리`
+    + (collection.length > placed ? ' · 그림을 끌어 원하는 칸에 놓을 수 있어요' : '');
   const list = document.getElementById('bag-list');
   if (!collection.length) {
     list.innerHTML = '<div class="bag-empty">아직 획득한 포켓몬이 없어요.<br><a href="/game.html">카드 게임</a>에서 얻어 보세요!</div>';

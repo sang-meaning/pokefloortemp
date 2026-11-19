@@ -304,3 +304,20 @@ body.editing .prop img, body.editing .item-ent img { pointer-events: auto; curso
   font-size: 13px; max-width: calc(100vw - 680px); min-width: 360px;
 }
 .edit-toolbar .et-name { flex: 1; color: #dfe5f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- 포켓몬 끌어다 놓기 ---------- */
+body:not(.editing) .mon img { cursor: grab; }
+body.mon-dragging, body.mon-dragging * { cursor: grabbing !important; }
+.mon.held img { filter: drop-shadow(0 6px 4px rgba(0,0,0,.35)); }
+.mon.held .shadow { opacity: .4; }
+.tile-hl {
+  position: absolute; width: 64px; height: 32px; z-index: 2; pointer-events: none;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: rgba(120, 255, 140, .45);
+}
+.tile-hl.bad { background: rgba(255, 80, 80, .45); }
+.drag-float {
+  position: fixed; z-index: 500; pointer-events: none; image-rendering: pixelated;
+  transform: translate(-50%, -80%); max-height: 96px;
+}
+.bag-item:not(.placed) img { cursor: grab; touch-action: none; }

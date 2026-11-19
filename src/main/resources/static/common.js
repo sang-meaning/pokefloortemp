@@ -37,7 +37,7 @@ async function api(url, options = {}) {
 /** 상단 메뉴. page: 'room' | 'game' | 'dex' | 'admin' */
 function renderNav(page, extraHtml = '') {
   const items = [
-    ['room', '/', '🏠 내 방'],
+    ['room', '/', '🏝 내 박스'],
     ['game', '/game.html', '🃏 카드 게임'],
     ['dex', '/dex.html', '📖 도감'],
   ];

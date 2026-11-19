@@ -75,6 +75,15 @@ public class CollectionService {
         return toDto(o);
     }
 
+    /** 끌어다 놓기: 박스의 (x, y) 칸으로 옮김. 인벤토리에 있던 포켓몬이면 꺼내면서 옮김 */
+    @Transactional
+    public OwnedDto moveTo(int pokemonId, Long boxId, Integer x, Integer y) {
+        OwnedPokemon o = find(pokemonId);
+        int[] t = worldService.checkTile(boxId, x, y, null);   // 박스 안, 소품·아이템 없는 칸
+        o.placeAt(boxId, t[0], t[1]);
+        return toDto(o);
+    }
+
     /** 관리자가 포켓몬을 삭제할 때 획득 기록도 같이 삭제 */
     @Transactional
     public void removeIfOwned(int pokemonId) {

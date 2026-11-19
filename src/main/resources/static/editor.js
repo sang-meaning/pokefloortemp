@@ -34,13 +34,6 @@ const paletteTabs = {
 };
 
 /* ---------- 칸 계산 ---------- */
-function tileAtClient(cx, cy) {
-  const p = clientToWorld(cx, cy);
-  const wx = Math.floor(p.x), wy = Math.floor(p.y);
-  const t = tileInfo(wx, wy);
-  return t ? { ...t, wx, wy } : null;
-}
-
 /** 그 칸에 놓을 수 있는지 (ignore: 지금 옮기는 자기 자신) */
 function canPlaceAt(t, ignore) {
   if (!t) return false;

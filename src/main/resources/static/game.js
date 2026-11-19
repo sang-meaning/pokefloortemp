@@ -148,13 +148,13 @@ function showResult(res) {
         <input type="text" id="nick" maxlength="12" placeholder="별명 (선택)">
       </div>`;
     actions.innerHTML = `
-      <button class="btn" id="place">방에 배치하기</button>
+      <button class="btn" id="place">메인 박스에서 만나기</button>
       <button class="btn ghost" id="again">한 판 더</button>
       <a class="btn ghost" href="/dex.html">도감 보기</a>`;
     document.getElementById('place').onclick = async () => {
       const nickname = document.getElementById('nick').value.trim();
+      // 획득하면 이미 메인 박스 중앙(가까운 빈칸)에 나와 있음
       if (nickname) await api(`/api/collection/${p.id}`, { method: 'PATCH', body: { nickname } });
-      await api(`/api/collection/${p.id}`, { method: 'PATCH', body: { placed: true } });
       location.href = '/';
     };
   } else if (res.result === 'WIN') {

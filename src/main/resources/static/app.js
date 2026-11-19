@@ -578,6 +578,14 @@ function clientToWorld(cx, cy) {
   return unIso((cx - rect.left - panX) / zoom, (cy - rect.top - panY) / zoom);
 }
 
+/** 화면(클라이언트) 좌표 아래의 칸 → {box, lx, ly, wx, wy} (박스 밖이면 null) */
+function tileAtClient(cx, cy) {
+  const p = clientToWorld(cx, cy);
+  const wx = Math.floor(p.x), wy = Math.floor(p.y);
+  const t = tileInfo(wx, wy);
+  return t ? { ...t, wx, wy } : null;
+}
+
 /* ---------- 지금 보고 있는 박스 = 화면 가운데에 가장 가까운 박스 ---------- */
 let currentBox = null;
 const currentBoxListeners = [];

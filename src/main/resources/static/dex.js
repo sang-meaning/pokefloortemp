@@ -35,7 +35,7 @@ function render() {
     const img = p.sprites.frontStatic || p.sprites.frontAnimated;
     return `
       <div class="card ${o ? 'owned' : 'missing'}" data-id="${p.id}">
-        ${o && o.placed ? '<span class="placed-tag">방에 있음</span>' : ''}
+        ${o && o.placed ? '<span class="placed-tag">박스에 있음</span>' : ''}
         <img class="sprite" src="${img}" alt="" loading="lazy">
         <div class="no">${dexNo(p.id)}</div>
         <div class="name">${o ? escapeHtml(p.nameKo) : '???'}</div>
@@ -75,8 +75,8 @@ function openDetail(id) {
         <button class="btn small" id="nick-save">별명 저장</button>
       </div>
       <div class="detail-actions">
-        <button class="btn${o.placed ? ' ghost' : ''}" id="toggle-place">${o.placed ? '방에서 빼기' : '방에 꺼내기'}</button>
-        <a class="btn ghost" href="/">🏠 내 방 보기</a>
+        <button class="btn${o.placed ? ' ghost' : ''}" id="toggle-place">${o.placed ? '인벤토리에 넣기' : '메인 박스에 꺼내기'}</button>
+        <a class="btn ghost" href="/">🏝 내 박스 보기</a>
       </div>
       <div class="detail-meta">획득 ${date}</div>`;
     box.querySelector('#nick-save').onclick = async () => {
