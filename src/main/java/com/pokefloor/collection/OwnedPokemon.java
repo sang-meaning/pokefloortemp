@@ -25,7 +25,7 @@ public class OwnedPokemon {
 
     private LocalDateTime obtainedAt;
 
-    /** 놓인 박스와 박스 안 타일(0~7). 인벤토리(미배치)면 모두 null */
+    /** 놓인 박스와 박스 안 타일(0~11). 인벤토리(미배치)면 모두 null */
     private Long boxId;
     private Integer tileX;
     private Integer tileY;

@@ -13,7 +13,7 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 
 /**
- * 박스 = 8×8 타일짜리 땅 한 덩어리. 바이옴은 박스마다 하나.
+ * 박스 = 12×12 타일짜리 땅 한 덩어리. 바이옴은 박스마다 하나.
  * (bx, by) 는 박스 격자 좌표. 메인 박스는 (0, 0) 에 고정이고 지울 수 없음.
  */
 @Entity

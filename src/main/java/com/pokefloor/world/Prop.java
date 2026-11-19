@@ -10,7 +10,7 @@ import jakarta.persistence.Table;
 
 /**
  * 박스에 놓인 도트 소품(나무, 바위 등). 획득하는 게 아니라 자유롭게 놓고 지움.
- * (x, y) 는 박스 안 타일 좌표 0~7. 한 타일에 소품/아이템은 하나만.
+ * (x, y) 는 박스 안 타일 좌표 0~11. 한 타일에 소품/아이템은 하나만.
  */
 @Entity
 @Table(name = "prop", indexes = @Index(columnList = "boxId"))

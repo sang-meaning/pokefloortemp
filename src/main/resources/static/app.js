@@ -2,8 +2,8 @@
  * PokeFloor - 떠 있는 도트 바이옴 섬(박스) 위를 돌아다니는 포켓몬
  *
  * 좌표계
- *  - 박스: 박스 격자 (bx, by). 메인 박스 = (0, 0). 박스 하나 = 8×8 타일
- *  - 월드 타일 (wx, wy) = (bx*STRIDE + lx, by*STRIDE + ly). 박스 사이에 2칸 틈
+ *  - 박스: 박스 격자 (bx, by). 메인 박스 = (0, 0). 박스 하나 = 12×12 타일
+ *  - 월드 타일 (wx, wy) = (bx*STRIDE + lx, by*STRIDE + ly). 박스 사이에 1칸 틈
  *  - 화면 좌표 (sx, sy) = iso(wx, wy). x 는 화면 오른쪽 아래, y 는 왼쪽 아래
  *  - 깊이(앞뒤 순서) = wx + wy. 클수록 관람자에게 가까움 → z-index 큼
  * ========================================================= */
@@ -11,9 +11,9 @@
 const TW = 64;                 // 타일 가로 (2:1 도트 아이소메트릭)
 const TH = 32;                 // 타일 세로
 const PX = 2;                  // 바닥 도트 1칸 = 화면 2px
-const N = 8;                   // 박스 한 변 타일 수
-const STRIDE = N + 2;          // 박스 간격 (2칸 틈 → 떠 있는 섬처럼)
-const SLAB = 28;               // 섬 두께(px)
+const N = 12;                  // 박스 한 변 타일 수 (서버 WorldService.BOX_SIZE 와 같게)
+const STRIDE = N + 1;          // 박스 간격 (1칸 틈 → 거의 붙어 있는 섬)
+const SLAB = 24;               // 섬 두께(px)
 const PROP_SCALE = 3;          // 16px 소품 → 48px
 const MON_SCALE = 1;           // 포켓몬 GIF 배율
 const MARGIN = 48;

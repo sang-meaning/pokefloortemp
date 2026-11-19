@@ -27,8 +27,8 @@ import java.util.Set;
 @Service
 public class WorldService {
 
-    /** 박스 한 변의 타일 수 (모든 박스 동일) */
-    public static final int BOX_SIZE = 8;
+    /** 박스 한 변의 타일 수 (모든 박스 동일, 프론트 app.js 의 N 과 같아야 함) */
+    public static final int BOX_SIZE = 12;
     /** 박스는 이 범위 안에서만 만들 수 있음 (메인 기준 ±) */
     public static final int MAX_RANGE = 6;
 
@@ -36,12 +36,15 @@ public class WorldService {
     private static final List<PropRequest> MAIN_DEFAULT = List.of(
             new PropRequest(null, "tree_round", 0, 0),
             new PropRequest(null, "pine", 1, 0),
-            new PropRequest(null, "bush", 7, 1),
-            new PropRequest(null, "flower_red", 2, 6),
-            new PropRequest(null, "daisy", 5, 2),
-            new PropRequest(null, "rock_brown_s", 6, 6),
-            new PropRequest(null, "stump", 0, 7),
-            new PropRequest(null, "sign", 7, 5));
+            new PropRequest(null, "tree_round", 0, 2),
+            new PropRequest(null, "bush", 10, 1),
+            new PropRequest(null, "flower_red", 2, 9),
+            new PropRequest(null, "flower_white", 8, 3),
+            new PropRequest(null, "daisy", 7, 2),
+            new PropRequest(null, "rock_brown_s", 9, 9),
+            new PropRequest(null, "stump", 0, 11),
+            new PropRequest(null, "bush_flower", 11, 6),
+            new PropRequest(null, "sign", 11, 8));
 
     private final BoxRepository boxes;
     private final PropRepository props;
@@ -102,7 +105,7 @@ public class WorldService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "기존 박스 옆에만 붙일 수 있어요");
         }
         Box box = boxes.save(new Box(bx, by, biome, false));
-        scatterProps(box, 5);
+        scatterProps(box, 9);
         return BoxDto.from(box);
     }
 
@@ -151,7 +154,7 @@ public class WorldService {
         int placed = 0;
         for (int tries = 0; placed < count && tries < 100; tries++) {
             int x = random.nextInt(BOX_SIZE), y = random.nextInt(BOX_SIZE);
-            boolean nearCenter = x >= 2 && x <= 5 && y >= 2 && y <= 5;
+            boolean nearCenter = x >= 3 && x <= BOX_SIZE - 4 && y >= 3 && y <= BOX_SIZE - 4;   // 가운데는 비워 둠
             if (nearCenter || !used.add(y * BOX_SIZE + x)) continue;
             props.save(new Prop(box.getId(), keys.get(random.nextInt(keys.size())), x, y));
             placed++;
