@@ -2,7 +2,7 @@ package com.pokefloor.pokemon;
 
 import java.util.List;
 
-/** 화면에 필요한 포켓몬 정보만 추린 응답 객체 */
+/** 화면에 내려주는 포켓몬 정보 */
 public record PokemonDto(
         int id,
         String nameKo,
@@ -12,6 +12,7 @@ public record PokemonDto(
         List<String> typesKo,  // 예: ["풀", "독"]
         double heightM,
         double weightKg,
+        boolean active,
         Sprites sprites
 ) {
     /**
@@ -22,4 +23,11 @@ public record PokemonDto(
      */
     public record Sprites(String frontAnimated, String backAnimated, String frontStatic,
                           String home, String officialArtwork) {}
+
+    public static PokemonDto from(Pokemon p) {
+        return new PokemonDto(p.getId(), p.getNameKo(), p.getNameEn(), p.getGenusKo(), p.getFlavorTextKo(),
+                p.typeList(), p.getHeightM(), p.getWeightKg(), p.isActive(),
+                new Sprites(p.getFrontAnimated(), p.getBackAnimated(), p.getFrontStatic(),
+                        p.getHome(), p.getOfficialArtwork()));
+    }
 }
