@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface OwnedPokemonRepository extends JpaRepository<OwnedPokemon, Integer> {
     List<OwnedPokemon> findAllByOrderByObtainedAtAsc();
+    List<OwnedPokemon> findByBoxId(Long boxId);
 }

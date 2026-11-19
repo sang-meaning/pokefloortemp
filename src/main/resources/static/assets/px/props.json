@@ -383,8 +383,7 @@
 "name": "덩굴",
 "biomes": [
 "cave",
-"forest",
-"sea"
+"forest"
 ],
 "w": 9,
 "h": 30

@@ -9,6 +9,9 @@ public record OwnedDto(
         PokemonDto pokemon,
         String nickname,
         boolean placed,
+        Long boxId,
+        Integer x,
+        Integer y,
         LocalDateTime obtainedAt
 ) {
     /** 화면에 표시할 이름: 별명이 있으면 별명 */

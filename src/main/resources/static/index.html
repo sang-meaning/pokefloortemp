@@ -14,37 +14,45 @@
       <div id="entities"></div>
     </div>
     <div id="empty-room" class="empty-room hidden">
-      <p>아직 방에 나와 있는 포켓몬이 없어요.</p>
+      <p>아직 박스에 나와 있는 포켓몬이 없어요.</p>
       <a class="btn" href="/game.html">🃏 카드 게임으로 포켓몬 얻기</a>
-      <button class="btn ghost" id="empty-open-bag">🎒 내 포켓몬 꺼내기</button>
+      <button class="btn ghost" id="empty-open-bag">🎒 인벤토리 열기</button>
     </div>
-    <div class="room-hint">포켓몬을 클릭해 보세요 · 휠로 확대/축소 · 드래그로 이동</div>
+    <div class="room-hint" id="room-hint">포켓몬을 클릭해 보세요 · 휠로 확대/축소 · 빈 곳을 끌어서 화면 이동</div>
   </main>
 
-  <aside id="palette" class="hidden">
-    <div class="bag-head"><strong>🛠 가구 놓기</strong></div>
-    <p class="bag-sub">가구를 고르고 바닥을 클릭하세요. 놓인 가구는 끌어서 옮기고, R로 돌리고, Delete로 지워요.</p>
-    <div id="palette-tabs" class="pal-tabs"></div>
-    <div id="palette-list" class="pal-list"></div>
-    <div class="pal-foot"><button id="palette-reset" class="btn small ghost">↺ 기본 배치로</button></div>
-  </aside>
-
-  <div id="edit-toolbar" class="edit-toolbar hidden">
-    <span class="et-name"></span>
-    <button id="et-rotate" class="btn small ghost" data-need-sel title="R">⟳ 회전</button>
-    <button id="et-delete" class="btn small danger" data-need-sel title="Delete">🗑 삭제</button>
-    <button id="et-done" class="btn small">완료</button>
-  </div>
-  <div id="edit-flash" class="edit-flash"></div>
-
-  <aside id="bag" class="hidden">
+  <!-- 인벤토리: 박스에 없는 포켓몬, 아이템·배지 -->
+  <aside id="bag" class="panel-side hidden">
     <div class="bag-head">
-      <strong>🎒 내 포켓몬</strong>
-      <button id="bag-close" aria-label="닫기">×</button>
+      <strong>🎒 인벤토리</strong>
+      <button id="bag-close" class="x" aria-label="닫기">×</button>
+    </div>
+    <div class="bag-tabs" id="bag-tabs">
+      <button data-tab="mon" class="on">포켓몬</button>
     </div>
     <p class="bag-sub" id="bag-sub"></p>
     <div id="bag-list"></div>
   </aside>
+
+  <!-- 박스 추가 -->
+  <div id="box-modal" class="modal hidden">
+    <div class="modal-card">
+      <button class="x" id="box-modal-close" aria-label="닫기">×</button>
+      <h2>새 박스 추가</h2>
+      <p class="modal-sub" id="box-modal-sub"></p>
+      <div class="box-modal-body">
+        <div class="minimap-wrap"><div id="minimap" class="minimap"></div></div>
+        <div>
+          <h3>바이옴</h3>
+          <div id="biome-list" class="biome-list"></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <span id="box-modal-msg" class="modal-msg"></span>
+        <button class="btn" id="box-create" disabled>박스 만들기</button>
+      </div>
+    </div>
+  </div>
 
   <aside id="info" class="hidden">
     <button id="info-close" aria-label="닫기">×</button>
@@ -58,16 +66,17 @@
       <dt>몸무게</dt><dd id="info-weight"></dd>
     </dl>
     <p class="info-flavor" id="info-flavor"></p>
+    <div class="info-where" id="info-where"></div>
     <div class="info-actions">
       <button id="info-rename" class="btn small ghost">✎ 별명 바꾸기</button>
-      <button id="info-unplace" class="btn small ghost">가방에 넣기</button>
+      <button id="info-unplace" class="btn small ghost">인벤토리에 넣기</button>
     </div>
   </aside>
 
+  <div id="flash" class="flash"></div>
+
   <script src="/common.js"></script>
-  <script src="/catalog.js"></script>
   <script src="/app.js"></script>
   <script src="/room.js"></script>
-  <script src="/editor.js"></script>
 </body>
 </html>

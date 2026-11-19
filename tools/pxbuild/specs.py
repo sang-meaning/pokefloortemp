@@ -46,7 +46,7 @@ SPECS = [
   ('skull',           '해골',          ['cave','ghost','volcano'],    ('cv',0,2,1,1)),
   ('bones',           '뼈',            ['cave','ghost','desert'],     ('cv',2,2,1,1)),
   ('cave_mushrooms',  '동굴 버섯',     ['cave','ghost'],              ('cv',1,3,1,1)),
-  ('vine',            '덩굴',          ['cave','forest','sea'],       ('cv',4,3,1,2)),
+  ('vine',            '덩굴',          ['cave','forest'],       ('cv',4,3,1,2)),
   ('brazier',         '화로',          ['cave','volcano','village'],  ('cv',14,17,1,1)),
   # ---- 마을 ----
   ('tent_green',      '초록 텐트',     ['village','meadow','forest'], ('rl',46,10,2,2)),

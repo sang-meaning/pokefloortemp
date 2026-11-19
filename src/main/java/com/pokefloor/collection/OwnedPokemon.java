@@ -20,10 +20,15 @@ public class OwnedPokemon {
     /** 본래 이름과 별개로 붙이는 별명 (없으면 null) */
     private String nickname;
 
-    /** 방에 나와서 돌아다니는지 */
+    /** 박스에 나와서 돌아다니는지 (false = 인벤토리) */
     private boolean placed;
 
     private LocalDateTime obtainedAt;
+
+    /** 놓인 박스와 박스 안 타일(0~7). 인벤토리(미배치)면 모두 null */
+    private Long boxId;
+    private Integer tileX;
+    private Integer tileY;
 
     protected OwnedPokemon() {}
 
@@ -36,6 +41,24 @@ public class OwnedPokemon {
     public String getNickname() { return nickname; }
     public void setNickname(String nickname) { this.nickname = nickname; }
     public boolean isPlaced() { return placed; }
-    public void setPlaced(boolean placed) { this.placed = placed; }
+    public Long getBoxId() { return boxId; }
+    public Integer getTileX() { return tileX; }
+    public Integer getTileY() { return tileY; }
+
+    /** 박스의 (x, y) 칸에 꺼내 놓기 */
+    public void placeAt(Long boxId, int x, int y) {
+        this.placed = true;
+        this.boxId = boxId;
+        this.tileX = x;
+        this.tileY = y;
+    }
+
+    /** 인벤토리로 넣기 (미배치) */
+    public void unplace() {
+        this.placed = false;
+        this.boxId = null;
+        this.tileX = null;
+        this.tileY = null;
+    }
     public LocalDateTime getObtainedAt() { return obtainedAt; }
 }
