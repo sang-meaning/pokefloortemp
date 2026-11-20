@@ -10,8 +10,7 @@
 
 const ARENA = 2400;            // 경기장 한 변 (월드 단위 = 화면 px × 배율)
 const TILE = 32;
-const RUN_TIME = 180;          // 보스까지 3분
-const MID_BOSS_TIME = 90;      // 중간 보스
+const RUN_TIME = 180;          // 진행도 기준 시간 (몬스터 강해지는 속도·이벤트 시점)
 const ELITE_TIMES = [30, 65, 115, 145, 165];
 const SWARM_TIMES = [50, 110, 160];
 const SKILL_MAX = 8;
@@ -73,6 +72,7 @@ class DungeonGame {
     this.tier = start.tier || { no: 2, hp: 1, dmg: 1, spawn: 1, label: 'NORMAL' };
     this.ultDark = 0;
     this.time = 0;                   // 생존 시간 (보스 전까지)
+    this.killTarget = start.killTarget || 390;   // 이만큼 쓰러뜨리면 보스
     this.clock = 0;                  // 연출용 전체 시간
     this.phase = 'loading';
     this.picks = 0;
@@ -401,9 +401,14 @@ class DungeonGame {
     if (this.hudTick <= 0) { this.hudTick = 0.1; this.hooks.onHud(this); }
   }
 
+  /** 진행 단계(초 단위): 실제 시간과 처치 진행도 중 앞선 쪽 → 빨리 쓸어버리면 몬스터도 빨리 강해짐 */
+  stage() {
+    return Math.max(this.time, Math.min(1, this.kills / this.killTarget) * 170);
+  }
+
   timeline() {
-    const t = this.time;
-    if (t >= MID_BOSS_TIME && !this.events.has('mid')) {
+    const t = this.stage();
+    if (this.kills >= this.killTarget / 2 && !this.events.has('mid')) {
       this.events.add('mid');
       this.spawnMid();
     }
@@ -420,13 +425,12 @@ class DungeonGame {
         this.hooks.onBanner('강한 야생 포켓몬이 나타났다!', 'elite');
       }
     });
-    if (t >= RUN_TIME) this.toBoss();
+    if (this.kills >= this.killTarget) this.toBoss();
   }
 
   /* ---------- 3분 → 보스 ---------- */
   toBoss() {
     this.phase = 'clear';
-    this.time = RUN_TIME;
     // 정화의 파동: 남은 몬스터 정리
     this.fx.push({ kind: 'purge', x: this.player.x, y: this.player.y, r: 0, life: 1.2, max: 1.2 });
     SFX.play('explode');
@@ -473,7 +477,7 @@ class DungeonGame {
 
   /* ---------- 생성 ---------- */
   spawn(dt) {
-    const t = this.time;
+    const t = this.stage();
     // 파티가 적으면 조금 덜 몰려옴
     const rate = (0.8 + t * 0.022) * (0.7 + 0.15 * this.members.length) * this.tier.spawn;
     this.spawnAcc += rate * dt;
@@ -481,13 +485,19 @@ class DungeonGame {
       this.spawnAcc--;
       if (this.enemies.length < 220) this.spawnEnemy(false);
     }
+    // 다 쓸어버려도 화면이 비지 않게 최소 마릿수를 채움 → 강하면 그만큼 빨리 목표 처치 수에 도달
+    const minAlive = Math.min(200, 20 + Math.min(1, this.kills / this.killTarget) * 75);
+    if (this.enemies.length < minAlive) {
+      this.fillAcc = (this.fillAcc || 0) + dt * 18;
+      while (this.fillAcc >= 1) { this.fillAcc--; this.spawnEnemy(false); }
+    }
   }
 
   spawnEnemy(elite, at) {
     const d = pickOne(this.mobDefs);
     if (!d) return null;
     const st = d.p.stats || { bst: 300, speed: 50, hp: 45 };
-    const t = this.time;
+    const t = this.stage();
     let x, y;
     if (at) { ({ x, y } = at); } else {
       const a = Math.random() * Math.PI * 2, r = rand(560, 700);
@@ -535,7 +545,7 @@ class DungeonGame {
   swarm() {
     this.hooks.onBanner('야생 포켓몬 무리가 몰려온다!', 'swarm');
     SFX.play('tele');
-    const n = 22 + Math.floor(this.time / 10);
+    const n = 22 + Math.floor(this.stage() / 10);
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2;
       this.spawnEnemy(false, {
@@ -586,7 +596,7 @@ class DungeonGame {
       this.text(p.x, p.y - 50, 'MISS', '#c9e8ff', 13);
       return;
     }
-    if (this.mods.thorns && from && (from.kind === 'mob' || from.kind === 'elite')) this.damage(from, this.mods.thorns * (1 + this.time / 60), '노말', p, 80, true);
+    if (this.mods.thorns && from && (from.kind === 'mob' || from.kind === 'elite')) this.damage(from, this.mods.thorns * (1 + this.stage() / 60), '노말', p, 80, true);
     const reduced = amount * this.tier.dmg * (this.legendDmg || 1) * this.mods.armor * (100 / (100 + p.def * 0.5));
     p.hp -= reduced;
     p.inv = 0.5;
@@ -824,12 +834,12 @@ class DungeonGame {
     this.parts.push({ kind: 'ring', x: e.x, y: e.y - 10, r: 6, R: e.kind === 'elite' ? 90 : 34, life: 0.3, max: 0.3, color: '#ffffff' });
     if (this.mods.leech) this.heal(this.mods.leech);
     const coins = e.kind === 'elite' ? 6 : Math.random() < 0.42 ? 1 : 0;
-    const val = e.kind === 'elite' ? 3 : 1 + (this.time > 90 ? 1 : 0) * (Math.random() < 0.5 ? 1 : 0);
+    const val = e.kind === 'elite' ? 3 : 1 + (this.stage() > 90 ? 1 : 0) * (Math.random() < 0.5 ? 1 : 0);
     for (let i = 0; i < coins; i++) this.coins.push({ x: e.x, y: e.y, vx: rand(-120, 120), vy: rand(-160, -40), v: val, t: 0 });
     if (e.shiny) { for (let i = 0; i < 4; i++) this.coins.push({ x: e.x, y: e.y, vx: rand(-150, 150), vy: rand(-180, -40), v: 3, t: 0 }); }
     if (Math.random() < (e.kind === 'elite' ? 1 : 0.018)) this.orbs.push({ x: e.x, y: e.y, amt: e.kind === 'elite' ? 0.2 : 0.08, t: 0 });
     // 경험치 결정
-    const gv = e.mid ? 40 : e.kind === 'elite' ? 12 : 1 + (this.time > 60 ? 1 : 0) + (this.time > 125 ? 1 : 0);
+    const gv = e.mid ? 40 : e.kind === 'elite' ? 12 : 1 + (this.stage() > 60 ? 1 : 0) + (this.stage() > 125 ? 1 : 0);
     this.dropGem(e.x + rand(-6, 6), e.y + rand(-6, 6), gv);
     if (e.kind === 'elite') {
       this.chests.push({ x: e.x, y: e.y, t: 0, big: !!e.mid });
@@ -883,7 +893,7 @@ class DungeonGame {
         if (e.ai === 'shoot') { if (d < 230) spd *= -0.5; else if (d < 320) spd = 0; }
         e.fireT = (e.fireT ?? rand(1.5, 3)) - dt;
         if (e.fireT <= 0 && d < 520 && this.phase === 'play') {
-          const col = typeColor(e.main), dm = 4 * this.diff * (1 + this.time / 120);
+          const col = typeColor(e.main), dm = 4 * this.diff * (1 + this.stage() / 120);
           if (e.ai === 'mid') {
             e.fireT = 2.4;
             const off = Math.random();

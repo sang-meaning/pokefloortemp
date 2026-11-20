@@ -291,11 +291,10 @@ const hooks = {
     $('hp-fill').style.width = `${Math.max(0, p.hp / p.maxHp * 100)}%`;
     $('hp-text').textContent = `${Math.max(0, Math.ceil(p.hp))} / ${Math.round(p.maxHp)}`;
     $('hp-fill').parentElement.classList.toggle('low', p.hp / p.maxHp < 0.3);
-    const t = Math.min(RUN_TIME, g.time);
-    $('tl-fill').style.width = `${t / RUN_TIME * 100}%`;
-    const left = Math.max(0, RUN_TIME - t);
+    const k = Math.min(g.killTarget, g.kills);
+    $('tl-fill').style.width = `${k / g.killTarget * 100}%`;
     $('tl-text').dataset.tier = g.tier.label;
-    $('tl-text').textContent = g.boss ? (g.boss.state === 'dead' ? '승리!' : '보스전') : `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')} 남음`;
+    $('tl-text').textContent = g.boss ? (g.boss.state === 'dead' ? '승리!' : '보스전') : `보스까지 ${Math.max(0, g.killTarget - g.kills)}마리 · ${Math.floor(g.time / 60)}:${String(Math.floor(g.time % 60)).padStart(2, '0')}`;
     $('gold').textContent = `💰 ${Math.floor(g.gold)}`;
     $('kills').textContent = `처치 ${g.kills}`;
     $('xp-fill').style.width = `${Math.min(100, g.xp / xpNeed(g.lv) * 100)}%`;

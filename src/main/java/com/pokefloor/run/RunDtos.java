@@ -29,10 +29,10 @@ public final class RunDtos {
 
     public record Brought(String code, int itemId, String name, String sprite, int qty, String use, int value) {}
 
-    /** bossLevel: 표시용 보스 레벨 (파티 평균 레벨 + 3) */
+    /** bossLevel: 표시용 보스 레벨 (파티 평균 레벨 + 3), killTarget: 이만큼 쓰러뜨리면 보스 등장 */
     public record Start(String runId, BiomeOption biome, List<Member> party, PokemonDto boss, boolean bossShiny,
                         boolean bossCapturable, int bossLevel, List<PokemonDto> mobs, List<Brought> brought,
-                        double difficulty, long gold, TierInfo tier) {}
+                        double difficulty, long gold, TierInfo tier, int killTarget) {}
 
     /** used: 던전 안에서 쓴 상처약 {code: 개수}. 안 쓴 것은 인벤토리로 돌아감 */
     public record FinishRequest(boolean won, int kills, int elites, double timeSec, int gold, Map<String, Integer> used) {}

@@ -38,7 +38,7 @@ public class RunService {
 
     public static final int MAX_PARTY = 3;
     public static final int MAX_THROWS = 3;
-    public static final double RUN_SECONDS = 180;
+    public static final double MIN_SECONDS = 30;   // 아무리 강해도 보스까지 30초는 걸림
 
     private final PokemonService pokemonService;
     private final CollectionService collection;
@@ -67,6 +67,7 @@ public class RunService {
         int bossLevel;
         int leaderLevel;
         Tier tier = Tier.NORMAL;
+        int killTarget;
         Map<String, Integer> brought = new HashMap<>();
         boolean finished;
         boolean won;
@@ -151,6 +152,8 @@ public class RunService {
         s.bossShiny = CollectionService.rollShiny();
         s.leaderLevel = members.getFirst().combat().level();
         s.tier = tier;
+        // 보스까지 쓰러뜨릴 수: 평범하면 2분 45초쯤, 다 쓸어버리면 1분쯤 (파티가 많을수록 조금 더)
+        s.killTarget = 390 + 50 * (members.size() - 1);
         s.bossLevel = Math.max(1, (int) Math.round(avgLv) + 3 + tier.bossLv + (Legendary.is(boss.getId()) ? 5 : 0));
         sessions.put(s.id, s);
 
@@ -159,7 +162,7 @@ public class RunService {
                 * (Legendary.is(boss.getId()) ? 1.15 : 1);
         return new Start(s.id, option(biome), members, PokemonDto.from(boss), s.bossShiny,
                 collection.canAcquire(boss.getId(), s.bossShiny), s.bossLevel, mobs, brought, difficulty, wallet.gold(),
-                tier.info(wallet.clearedTier()));
+                tier.info(wallet.clearedTier()), s.killTarget);
     }
 
     /**
@@ -223,11 +226,11 @@ public class RunService {
         if (s.finished) throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 끝난 판이에요");
         s.finished = true;
         double elapsed = Duration.between(s.startedAt, Instant.now()).toMillis() / 1000.0;
-        // 보스까지 3분은 버텨야 승리 인정 (여유 두고 검사)
-        boolean won = req.won() && elapsed >= RUN_SECONDS * 0.8;
-        org.slf4j.LoggerFactory.getLogger(RunService.class).info("던전 결과: 보고 승리={} 경과 {}초 → 승리 인정={}", req.won(), (int) elapsed, won);
+        // 목표 마릿수를 쓰러뜨리고 보스를 이겨야 승리 (너무 빠르면 인정 안 함)
+        int kills = Math.max(0, Math.min(req.kills(), (int) (elapsed * 12)));
+        boolean won = req.won() && elapsed >= MIN_SECONDS && kills >= s.killTarget;
+        org.slf4j.LoggerFactory.getLogger(RunService.class).info("던전 결과: 보고 승리={} 경과 {}초 처치 {}/{} → 승리 인정={}", req.won(), (int) elapsed, kills, s.killTarget, won);
         s.won = won;
-        int kills = Math.max(0, Math.min(req.kills(), (int) (elapsed * 6)));
         int elites = Math.max(0, Math.min(req.elites(), 12));
 
         // 골드: 주운 만큼, 상한 검사. 쓰러지면 절반만. 부적금화면 상한도 1.5배
