@@ -614,6 +614,16 @@ const LEGEND_MOVE = {
 };
 Object.assign(BASE_CD, { missile: 1.2, mines: 1.5, spikeline: 1.3, sweep: 3.6, blackhole: 4, starfall: 3.4, pillars: 3.4, rend: 3.4, timestop: 6.5, psystrike: 3.2, legendrandom: 3 });
 
+/** 성향: 종족값으로 판단 (fast 스피드형 / tank 내구형 / special 특수형 / physical 물리형) */
+function roleOf(pokemon) {
+  const st = pokemon.stats || { hp: 50, attack: 55, defense: 50, spAttack: 55, spDefense: 50, speed: 50 };
+  const atk = Math.max(st.attack, st.spAttack), bulk = st.hp + st.defense + st.spDefense;
+  return st.speed >= 95 && atk < 105 ? 'fast'
+    : bulk >= 260 && atk < 95 ? 'tank'
+      : st.spAttack > st.attack ? 'special' : 'physical';
+}
+const ROLE_NAME = { fast: '💨 스피드형', tank: '🛡 내구형', special: '✦ 특수형', physical: '⚔ 물리형' };
+
 /** 포켓몬 공격 기술 고르기 — 공격 속성은 항상 대표 타입(mainType) */
 function skillOf(pokemon) {
   const main = mainType(pokemon);
@@ -629,11 +639,7 @@ function skillOf(pokemon) {
     return { name: sig, ...MOVES[sig], t: FUN.includes(sig) && MOVES[sig].t !== main ? main : MOVES[sig].t };
   }
   // 3) 대표 타입 × 성향
-  const st = pokemon.stats || { hp: 50, attack: 55, defense: 50, spAttack: 55, spDefense: 50, speed: 50 };
-  const atk = Math.max(st.attack, st.spAttack), bulk = st.hp + st.defense + st.spDefense;
-  const role = st.speed >= 95 && atk < 105 ? 'fast'
-    : bulk >= 260 && atk < 95 ? 'tank'
-      : st.spAttack > st.attack ? 'special' : 'physical';
+  const role = roleOf(pokemon);
   const list = (ARSENAL[main] || ARSENAL['노말'])[role];
   const name = list[pokemon.id % list.length];
   return { name, ...MOVES[name], t: main };

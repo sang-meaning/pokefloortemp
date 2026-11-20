@@ -456,6 +456,7 @@ function showInfo(mon) {
   document.getElementById('info-genus').textContent =
     owned && owned.nickname ? `${d.nameKo} · ${d.genusKo}` : d.genusKo;
   document.getElementById('info-types').innerHTML = typeChips(d.typesKo);
+  document.getElementById('info-battle').innerHTML = battleHtml(d, owned);
   document.getElementById('info-height').textContent = `${d.heightM} m`;
   document.getElementById('info-weight').textContent = `${d.weightKg} kg`;
   document.getElementById('info-flavor').textContent = d.flavorTextKo;
@@ -463,6 +464,37 @@ function showInfo(mon) {
   document.getElementById('info-where').textContent = box ? `${box.emoji} ${box.biomeName} 박스에서 지내요` : '';
   document.getElementById('info').classList.remove('hidden');
 }
+/* ---------- 능력치 패널: 종족값 → 지금 레벨 능력치, 던전 공격 속성·기술 ---------- */
+const STAT_ROWS = [
+  ['hp', 'HP', '#ff5959'], ['attack', '공격', '#f5ac78'], ['defense', '방어', '#fae078'],
+  ['spAttack', '특수공격', '#9db7f5'], ['spDefense', '특수방어', '#a7db8d'], ['speed', '스피드', '#fa92b2'],
+];
+function battleHtml(p, owned) {
+  const st = p.stats;
+  if (!st) return '';
+  const lv = owned ? owned.level : 1;
+  const cap = p.legendary && st.bst > 600 ? 600 / st.bst : 1;
+  const mul = (1 + 0.02 * (lv - 1)) * cap;
+  const sk = skillOf(p), main = mainType(p);
+  const rows = STAT_ROWS.map(([k, name, col]) => {
+    const base = st[k], now = Math.round(base * mul);
+    return `<div class="sr"><span>${name}</span>
+      <i class="sr-bar"><b style="width:${Math.min(100, base / 180 * 100)}%;background:${col}"></b>${mul > 1 ? `<u style="left:${Math.min(100, base / 180 * 100)}%;width:${Math.min(100 - Math.min(100, base / 180 * 100), (now - base) / 180 * 100)}%;background:${col}"></u>` : ''}</i>
+      <em>${base}</em><strong>${now}</strong></div>`;
+  }).join('');
+  const hp = Math.round(st.hp * mul), atk = Math.round(Math.max(st.attack, st.spAttack) * mul);
+  const def = Math.round((st.defense + st.spDefense) / 2 * mul), spd = Math.round(st.speed * mul);
+  return `
+    <div class="ib-head">⚔ 던전 공격 <span class="type-chip" style="background:${TYPE_COLORS[main] || '#888'}">${main}</span>
+      <span class="ib-skill" style="--c:${TYPE_COLORS[sk.t] || '#888'}">${sk.legend ? '★ ' : ''}${escapeHtml(sk.name)}</span>
+      <small>${sk.legend ? '★ 전설 궁극기' : ROLE_NAME[roleOf(p)]}</small></div>
+    <div class="ib-cols"><span></span><span></span><em>종족값</em><strong>Lv.${lv}</strong></div>
+    ${rows}
+    <div class="sr total"><span>합계</span><i></i><em>${st.bst}</em><strong>${Math.round(st.bst * mul)}</strong></div>
+    <div class="ib-dungeon">던전에서 ❤ ${hp} · ⚔ ${atk} · 🛡 ${def} · 💨 ${spd}
+      <small>레벨마다 +2%${cap < 1 ? ' · 전설은 종족값 600 기준으로 맞춤' : ''}</small></div>`;
+}
+
 function hideInfo() {
   if (selected) selected.el.classList.remove('selected');
   selected = null;
