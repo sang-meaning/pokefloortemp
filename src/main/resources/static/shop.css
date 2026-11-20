@@ -34,3 +34,7 @@
 .candy-mon img { width: 56px; height: 56px; image-rendering: pixelated; }
 .candy-mon .bar { display: block; width: 100%; height: 4px; background: #111; border-radius: 4px; overflow: hidden; }
 .candy-mon .bar i { display: block; height: 100%; background: #ffcf3a; }
+
+.shop-card.deal { border-color: #ff6b6b; box-shadow: 0 0 0 2px rgba(255,107,107,.25); }
+.deal-tag { position: absolute; left: 8px; top: 8px; background: #ff4d6d; color: #fff; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 6px; }
+.shop-card .price s { color: #8b95a8; font-weight: 400; font-size: 12px; }

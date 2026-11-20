@@ -2,9 +2,9 @@
 renderNav('shop');
 
 const GROUPS = [
-  { title: '몬스터볼', sub: '던전 보스를 쓰러뜨린 뒤 던져요. 비쌀수록 잘 잡혀요', uses: ['BALL'] },
-  { title: '회복약', sub: '던전에 가지고 들어가 1~3 키로 사용 (안 쓰면 돌려받아요)', uses: ['HEAL'] },
-  { title: '전투 도구', sub: '가지고 들어가면 그 판 동안 효과', uses: ['BUFF_ATTACK', 'BUFF_SPEED', 'BUFF_DEFENSE'] },
+  { title: '몬스터볼', sub: '보스를 쓰러뜨린 뒤 던져요. 상황에 맞는 볼은 85%! (전설은 마스터볼 빼고 ×0.7)', uses: ['BALL'] },
+  { title: '회복', sub: '던전에 가지고 들어가 1~3 키로 사용, 기력의조각은 쓰러지면 자동 (안 쓰면 돌려받아요)', uses: ['HEAL', 'REVIVE'] },
+  { title: '전투 도구', sub: '가지고 들어가면 그 판 동안 효과 (종류별 1개)', uses: ['BUFF_ATTACK', 'BUFF_SPEED', 'BUFF_DEFENSE', 'BUFF_CRIT', 'BUFF_EXP', 'BUFF_GOLD'] },
   { title: '성장', sub: '베이스캠프의 포켓몬에게 먹여요', uses: ['CANDY'] },
 ];
 let shop = null;
@@ -30,13 +30,14 @@ function card(e) {
   if (!e.item) return `<div class="shop-card off"><b>${e.code}</b><small>아이템 목록을 받는 중…</small></div>`;
   const can1 = shop.gold >= e.price, can5 = shop.gold >= e.price * 5;
   const badge = e.use === 'BALL' ? `<em class="rate">${e.value}%</em>` : '';
-  return `<div class="shop-card" data-code="${e.code}">
+  return `<div class="shop-card${e.deal ? ' deal' : ''}" data-code="${e.code}">
+    ${e.deal ? '<span class="deal-tag">오늘의 특가 -30%</span>' : ''}
     ${badge}
     <img src="${e.item.sprite}" alt="">
     <b>${escapeHtml(e.item.nameKo)}</b>
     <small>${escapeHtml(e.desc)}</small>
     <div class="own">보유 ${e.qty}</div>
-    <div class="price">💰 ${e.price.toLocaleString()}</div>
+    <div class="price">${e.deal ? `<s>${e.basePrice.toLocaleString()}</s> ` : ''}💰 ${e.price.toLocaleString()}</div>
     <div class="buy">
       <button class="btn small" data-q="1" ${can1 ? '' : 'disabled'}>사기</button>
       <button class="btn small ghost" data-q="5" ${can5 ? '' : 'disabled'}>×5</button>
@@ -75,12 +76,12 @@ function msg(text, bad) {
 }
 
 async function openCandy(code) {
-  const list = (await api('/api/collection')).filter(o => o.nextStarExp);
+  const list = (await api('/api/collection')).filter(o => o.nextLevelExp);
   document.getElementById('candy-list').innerHTML = list.length ? list.map(o => {
-    const pct = Math.round((o.exp - o.starExp) / (o.nextStarExp - o.starExp) * 100);
+    const pct = lvPct(o);
     return `<button class="candy-mon" data-id="${o.pokemon.id}">
       <img src="${spritesOf(o).still || spritesOf(o).front}" alt="">
-      <b>${escapeHtml(o.nickname || o.pokemon.nameKo)}</b>${starsHtml(o.stars)}
+      <b>${escapeHtml(o.nickname || o.pokemon.nameKo)}</b>${lvHtml(o)}
       <i class="bar"><i style="width:${pct}%"></i></i>
     </button>`;
   }).join('') : '<p class="sub">먹일 수 있는 포켓몬이 없어요</p>';
@@ -92,10 +93,9 @@ document.getElementById('candy-list').addEventListener('click', async e => {
   const b = e.target.closest('.candy-mon');
   if (!b) return;
   try {
-    const before = +b.querySelector('.stars').textContent.split('').filter(c => c === '★').length;
     const o = await api(`/api/collection/${b.dataset.id}/use-item`, { method: 'POST', body: { code: document.getElementById('candy').dataset.code } });
-    SFX.play(o.stars > before ? 'starup' : 'heal');
-    msg(`${o.nickname || o.pokemon.nameKo} 경험치 +120${o.stars > before ? ' · ★ 별이 올랐다!' : ''}`);
+    SFX.play('starup');
+    msg(`${o.nickname || o.pokemon.nameKo} 레벨 업! Lv.${o.level}`);
     document.getElementById('candy').classList.add('hidden');
     load();
   } catch (err) {

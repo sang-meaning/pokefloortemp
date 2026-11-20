@@ -46,7 +46,7 @@ function render() {
         </div></div>
         <div class="no">${dexNo(p.id)}</div>
         <div class="name">${o ? escapeHtml(p.nameKo) : '???'}</div>
-        <div class="nick">${o && o.nickname ? '“' + escapeHtml(o.nickname) + '”' : ''}${o && o.stars ? ` ${starsHtml(o.stars)}` : ''}</div>
+        <div class="nick">${o && o.nickname ? '“' + escapeHtml(o.nickname) + '”' : ''}${o ? ` ${lvHtml(o)}` : ''}</div>
         <div class="types">${o ? typeChips(p.typesKo) : ''}</div>
       </div>`;
   }).join('') || '<p class="msg">해당하는 포켓몬이 없어요.</p>';
@@ -74,7 +74,7 @@ function openDetail(id) {
         <img class="detail-img" id="detail-img" src="${art}" alt="">
         ${o.shiny ? `<button class="btn small" id="detail-shiny" data-normal="${art}" data-shiny="${p.sprites.shinyArtwork}">✨ 이로치 보기</button>` : '<div class="detail-noshiny">이로치는 아직 · 던전·카드 게임에서 4% 확률</div>'}
       </div>
-      <div class="detail-no">${dexNo(p.id)} · ${escapeHtml(p.genusKo)} ${starsHtml(o.stars)}</div>
+      <div class="detail-no">${dexNo(p.id)} · ${escapeHtml(p.genusKo)} ${lvHtml(o)} ${legendMark(p)}</div>
       <div class="detail-name">${escapeHtml(o.nickname || p.nameKo)}</div>
       ${o.nickname ? `<div class="detail-real">본래 이름 ${escapeHtml(p.nameKo)}</div>` : ''}
       <div class="detail-types">${typeChips(p.typesKo)}</div>

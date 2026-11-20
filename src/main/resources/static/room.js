@@ -109,7 +109,7 @@ function renderMonTab() {
     <div class="bag-item${o.placed ? ' placed' : ''}" data-id="${o.pokemon.id}">
       <img src="${spritesOf(o).still || spritesOf(o).front}" alt="">
       <div class="who">
-        <b>${o.showShiny ? '<span class="shiny-mark">✨</span>' : ''}${escapeHtml(displayName(o))} ${starsHtml(o.stars)}</b>
+        <b>${o.showShiny ? '<span class="shiny-mark">✨</span>' : ''}${escapeHtml(displayName(o))} ${lvHtml(o)}</b>
         <small>${dexNo(o.pokemon.id)} ${o.nickname ? escapeHtml(o.pokemon.nameKo) : ''}
           ${box ? ` · ${box.emoji} ${escapeHtml(box.biomeName)}` : ' · 인벤토리'}</small>
       </div>

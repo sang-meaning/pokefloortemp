@@ -288,7 +288,7 @@ class Monster {
     this.img.src = this.facing === 'front' ? s.front : (s.back || s.front);
     const o = this.owned;
     this.label.innerHTML = `${s.shiny ? '<span class="shiny-mark">✨</span>' : ''}${escapeHtml(displayName(o))}`
-      + (o && o.stars ? ` <span class="stars">${'★'.repeat(o.stars)}</span>` : '');
+      + (o ? ` <span class="lv">Lv.${o.level}</span>` : '');
     this.el.classList.toggle('shiny', s.shiny);
   }
 
@@ -446,10 +446,9 @@ function showInfo(mon) {
   document.getElementById('info-no').textContent = `No.${String(d.id).padStart(4, '0')}`;
   document.getElementById('info-name').innerHTML = `${look.shiny ? '<span class="shiny-mark">✨</span>' : ''}${escapeHtml(displayName(owned))}`;
   if (owned) {
-    const pct = owned.nextStarExp ? Math.round((owned.exp - owned.starExp) / (owned.nextStarExp - owned.starExp) * 100) : 100;
-    document.getElementById('info-grow').innerHTML = `${starsHtml(owned.stars)}
-      <span class="grow-bar"><i style="width:${pct}%"></i></span>
-      <small>${owned.nextStarExp ? `경험치 ${owned.exp} / ${owned.nextStarExp}` : '최고 등급'}</small>`;
+    document.getElementById('info-grow').innerHTML = `${lvHtml(owned)} ${legendMark(owned.pokemon)}
+      <span class="grow-bar"><i style="width:${lvPct(owned)}%"></i></span>
+      <small>${owned.nextLevelExp ? `다음 레벨까지 ${owned.nextLevelExp - owned.exp}` : '최고 레벨'}</small>`;
     const sh = document.getElementById('info-shiny');
     sh.classList.toggle('hidden', !owned.shiny);
     sh.textContent = owned.showShiny ? '원래 색으로 보기' : '✨ 이로치로 보기';

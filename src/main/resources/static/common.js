@@ -46,9 +46,45 @@ function typeMultiplier(atkType, defTypes) {
   return Math.max(0.4, Math.min(2, m));
 }
 
-/** 별 0~3개 */
-const starsHtml = (n, max = 3) =>
-  `<span class="stars">${'★'.repeat(n)}<i>${'★'.repeat(Math.max(0, max - n))}</i></span>`;
+/** 레벨 표시 (Lv.1~100) */
+const lvHtml = o => `<span class="lv">Lv.${o.level}</span>`;
+/** 다음 레벨까지 진행률(%) */
+const lvPct = o => (o.nextLevelExp ? Math.round((o.exp - o.levelExp) / (o.nextLevelExp - o.levelExp) * 100) : 100);
+/** 전설·환상 표시 */
+const legendMark = p => (p.legendary ? '<span class="legend-mark" title="전설·환상 포켓몬">★전설</span>' : '');
+
+/**
+ * 대표 타입 (던전 공격 속성): 타입이 둘이면
+ *  1) 아래 지정표 (그 포켓몬을 대표하는 근거가 뚜렷한 경우)
+ *  2) 노말 + X → X   (노말은 특징이 약함: 구구 → 비행)
+ *  3) X + 비행 → X   (비행은 날개 같은 부가 특성: 리자몽 → 불꽃, 갸라도스 → 물)
+ *  4) 그 밖에는 첫 번째 타입 (PokéAPI 1번 슬롯 = 공식 주 타입: 루주라 → 얼음)
+ */
+const MAIN_TYPE_OVERRIDE = {
+  131: '얼음',   // 라프라스: 냉동빔·얼음 이미지
+  62: '격투',    // 강챙이: 격투 진화형
+  80: '에스퍼',  // 야도란: 셀러에게 물려 에스퍼 각성
+  199: '에스퍼', // 야도킹
+  186: '물',     // 왕구리
+  212: '강철',   // 핫삼
+  227: '강철',   // 무장조
+  376: '강철',   // 메타그로스
+  448: '격투',   // 루카리오: 파동
+  282: '에스퍼', // 가디안
+  475: '에스퍼', // 엘레이드
+  473: '얼음',   // 맘모꾸리
+  461: '악',     // 포푸니라
+  445: '드래곤', // 한카리아스
+  248: '바위',   // 마기라스
+};
+function mainType(p) {
+  const t = p.typesKo || [];
+  if (MAIN_TYPE_OVERRIDE[p.id] && t.includes(MAIN_TYPE_OVERRIDE[p.id])) return MAIN_TYPE_OVERRIDE[p.id];
+  if (t.length < 2) return t[0] || '노말';
+  if (t[0] === '노말') return t[1];
+  if (t[1] === '비행') return t[0];
+  return t[0];
+}
 
 /** 획득 정보에 맞는 그림 (이로치를 보이게 해 두었으면 이로치) */
 function spritesOf(owned, pokemon = owned?.pokemon) {

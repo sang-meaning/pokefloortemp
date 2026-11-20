@@ -71,3 +71,6 @@ a.btn { display: inline-block; text-decoration: none; }
 .stars { color: #ffcf3a; letter-spacing: 1px; white-space: nowrap; }
 .stars i { font-style: normal; color: #5b6377; }
 .shiny-mark { color: #ffd84a; text-shadow: 0 0 6px #ff6bd5; }
+
+.lv { font-weight: 800; font-size: .85em; color: #ffcf3a; white-space: nowrap; }
+.legend-mark { font-size: 10px; font-weight: 800; color: #3a2a00; background: linear-gradient(90deg, #ffe680, #ffb238); border-radius: 6px; padding: 0 5px; }
