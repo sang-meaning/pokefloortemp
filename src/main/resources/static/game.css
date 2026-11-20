@@ -62,3 +62,5 @@
 
 .reward-img.shiny { filter: drop-shadow(0 0 12px #ffd84a); animation: shinyPulse 1.2s infinite alternate; }
 @keyframes shinyPulse { to { filter: drop-shadow(0 0 24px #ff6bd5); } }
+
+.lv-legend { display: block; font-size: 11px; color: #e0a800; margin-top: 2px; }

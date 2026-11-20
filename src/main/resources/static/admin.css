@@ -23,3 +23,5 @@
 .item-grid .kind { font-size: 11px; color: #8b95a8; }
 .item-grid .qty { font-size: 13px; margin-top: 4px; }
 .item-grid .qty b { color: #ffd84a; }
+
+.admin-dungeon { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }

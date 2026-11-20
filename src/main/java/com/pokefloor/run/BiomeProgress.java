@@ -23,6 +23,9 @@ public class BiomeProgress {
     public String getBiome() { return biome; }
     public int getCleared() { return cleared; }
 
+    /** 관리자: 진행도를 그대로 지정 */
+    public void set(int no) { cleared = Math.max(0, no); }
+
     /** 더 높은 단계를 깼으면 기록하고 true */
     public boolean clear(int no) {
         if (no <= cleared) return false;

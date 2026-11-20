@@ -20,6 +20,7 @@ async function init() {
     <button class="level${l.level === state.level ? ' on' : ''}" data-level="${l.level}">
       <b>${l.label}</b>
       <span>${l.rows}×${l.cols} · ${l.pairs}쌍 · ${l.limitSeconds}초</span>
+      <small class="lv-legend">★ 전설 카드 ${+(l.legendChance * 100).toFixed(1)}%</small>
     </button>`).join('');
   box.addEventListener('click', e => {
     const b = e.target.closest('.level');

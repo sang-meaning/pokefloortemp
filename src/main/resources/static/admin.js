@@ -110,3 +110,11 @@ document.getElementById('filter').addEventListener('input', render);
 document.getElementById('only-inactive').addEventListener('change', render);
 
 load().then(pollImport);
+
+/* ---------- 던전 난이도 해금 (관리자) ---------- */
+async function dungeonUnlock(cleared) {
+  const r = await api(`/api/admin/dungeon/unlock${cleared === undefined ? '' : `?cleared=${cleared}`}`, { method: 'POST' });
+  document.getElementById('dg-msg').textContent = r.cleared === 0 ? '모든 바이옴 진행도를 초기화했어요' : '모든 바이옴의 모든 난이도를 열었어요';
+}
+document.getElementById('dg-unlock').addEventListener('click', () => dungeonUnlock());
+document.getElementById('dg-reset').addEventListener('click', () => { if (confirm('모든 바이옴의 던전 진행도를 지울까요?')) dungeonUnlock(0); });

@@ -23,7 +23,8 @@ public final class GameDtos {
     /** reward 가 null 이면 이번 판 포켓몬을 이미 다 가지고 있던 경우 */
     public record FinishResponse(Result result, double elapsedSeconds, OwnedDto reward, String message) {}
 
-    public record LevelInfo(GameLevel level, String label, int rows, int cols, int pairs, int limitSeconds) {}
+    /** legendChance: 판에 전설·환상 카드가 한 장 섞일 확률 (0~1) */
+    public record LevelInfo(GameLevel level, String label, int rows, int cols, int pairs, int limitSeconds, double legendChance) {}
 
     public record Overview(List<LevelInfo> levels, int poolSize, int owned) {}
 }

@@ -44,7 +44,7 @@ public class GameService {
 
     public GameDtos.Overview overview() {
         List<GameDtos.LevelInfo> levels = Arrays.stream(GameLevel.values())
-                .map(l -> new GameDtos.LevelInfo(l, l.label, l.rows, l.cols, l.pairs(), l.limitSeconds))
+                .map(l -> new GameDtos.LevelInfo(l, l.label, l.rows, l.cols, l.pairs(), l.limitSeconds, l.legendChance))
                 .toList();
         return new GameDtos.Overview(levels, pokemonService.listActive().size(), collectionService.ownedIds().size());
     }
@@ -56,16 +56,16 @@ public class GameService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "포켓몬이 부족해요 (" + pool.size() + "마리, 필요 " + level.pairs() + "마리). 잠시 후 다시 시도하거나 관리자 페이지에서 추가하세요");
         }
-        // 가중치 뽑기: 전설·환상은 일반 포켓몬보다 훨씬 드물게
-        List<PokemonDto> picked = new ArrayList<>();
+        // 전설·환상 카드는 난이도별 확률(쉬움 2% · 보통 6% · 어려움 15%)로 한 장만 섞임, 나머지는 일반 포켓몬
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
-        while (picked.size() < level.pairs()) {
-            double total = pool.stream().mapToDouble(p -> p.legendary() ? com.pokefloor.pokemon.Legendary.APPEAR_WEIGHT : 1).sum();
-            double r = rnd.nextDouble(total);
-            for (PokemonDto p : pool) {
-                r -= p.legendary() ? com.pokefloor.pokemon.Legendary.APPEAR_WEIGHT : 1;
-                if (r <= 0) { picked.add(p); pool.remove(p); break; }
-            }
+        List<PokemonDto> legends = pool.stream().filter(PokemonDto::legendary).toList();
+        List<PokemonDto> normals = new ArrayList<>(pool.stream().filter(p -> !p.legendary()).toList());
+        Collections.shuffle(normals, rnd);
+        List<PokemonDto> picked = new ArrayList<>();
+        if (!legends.isEmpty() && rnd.nextDouble() < level.legendChance) picked.add(legends.get(rnd.nextInt(legends.size())));
+        for (PokemonDto p : normals) {
+            if (picked.size() >= level.pairs()) break;
+            picked.add(p);
         }
 
         // 한 마리당 카드 2장 → 섞기
