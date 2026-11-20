@@ -29,3 +29,12 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+// js·css 주소 뒤에 빌드 시각을 붙여서(?v=…) 업데이트하면 브라우저가 옛 파일을 섞어 쓰지 않게
+tasks.named('processResources') {
+    def assetVersion = String.valueOf(System.currentTimeMillis())
+    inputs.property('assetVersion', assetVersion)
+    filesMatching('**/static/*.html') {
+        filter { line -> line.replace('__V__', assetVersion) }
+    }
+}
