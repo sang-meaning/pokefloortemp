@@ -9,13 +9,14 @@ const state = {
 };
 
 /* ---------- 능력치 (서버 RunService.combat 과 같은 식) ---------- */
-function growthRate(bst) { return 0.10 + 0.10 * Math.max(0, Math.min(1, (600 - bst) / 300)); }
+/** 레벨마다 능력치 +2%, 전설은 종족값 합 600 기준으로 맞춤 (일반 최종진화보다 20% 정도 강함) */
 function combatOf(o) {
   const st = o.pokemon.stats || { hp: 50, attack: 55, spAttack: 55, defense: 50, spDefense: 50, speed: 50, bst: 300 };
-  const m = Math.pow(1 + growthRate(st.bst), o.stars);
+  const cap = o.pokemon.legendary && st.bst > 600 ? 600 / st.bst : 1;
+  const m = (1 + 0.02 * (o.level - 1)) * cap;
   return {
     hp: Math.round(st.hp * m), atk: Math.round(Math.max(st.attack, st.spAttack) * m),
-    def: Math.round((st.defense + st.spDefense) / 2 * m), spd: Math.round(st.speed * m), growth: growthRate(st.bst),
+    def: Math.round((st.defense + st.spDefense) / 2 * m), spd: Math.round(st.speed * m),
   };
 }
 
@@ -32,7 +33,7 @@ async function loadLobby() {
   if (!collection.length) renderStarter();
   if (!state.biome) state.biome = today.options[0].id;
   if (!state.party.length && collection.length) {
-    state.party = [...collection].sort((a, b) => b.stars - a.stars || b.exp - a.exp).slice(0, 3).map(o => o.pokemon.id);
+    state.party = [...collection].sort((a, b) => b.level - a.level || b.exp - a.exp).slice(0, 3).map(o => o.pokemon.id);
   }
   renderBiomes();
   renderParty();
@@ -84,7 +85,7 @@ function renderBiomes() {
       <div class="bo-body">
         <b>${b.emoji} ${escapeHtml(b.name)}</b>
         <small>${escapeHtml(b.description)}</small>
-        <div class="bo-row">👑 관장 보스 ${typeChips(b.bossTypes)}</div>
+        <div class="bo-row">👑 보스 ${typeChips(b.bossTypes)}</div>
         <div class="bo-row">👾 몬스터 ${typeChips(b.mobTypes)}</div>
       </div>
     </button>`).join('');
@@ -124,20 +125,20 @@ function renderParty() {
       <span class="slot-tag">${i === 0 ? '👑 리더' : `동료 ${i}`}</span>
       <img src="${sp.front}" alt="">
       <b>${sp.shiny ? '<span class="shiny-mark">✨</span>' : ''}${escapeHtml(o.nickname || o.pokemon.nameKo)}</b>
-      ${starsHtml(o.stars)}
+      ${lvHtml(o)} ${legendMark(o.pokemon)}
     </button>`;
   }).join('');
   if (!own.length) { $('party-list').innerHTML = ''; return; }
-  $('party-list').innerHTML = [...own].sort((a, b) => b.stars - a.stars || a.pokemon.id - b.pokemon.id).map(o => {
+  $('party-list').innerHTML = [...own].sort((a, b) => b.level - a.level || a.pokemon.id - b.pokemon.id).map(o => {
     const c = combatOf(o), sp = spritesOf(o), on = state.party.includes(o.pokemon.id);
     const sk = skillOf(o.pokemon);
-    const expPct = o.nextStarExp ? Math.round((o.exp - o.starExp) / (o.nextStarExp - o.starExp) * 100) : 100;
+    const expPct = lvPct(o);
     return `<button class="pcard${on ? ' on' : ''}" data-id="${o.pokemon.id}">
       <img src="${sp.still || sp.front}" alt="">
       <div class="pc-body">
-        <b>${sp.shiny ? '<span class="shiny-mark">✨</span>' : ''}${escapeHtml(o.nickname || o.pokemon.nameKo)} ${starsHtml(o.stars)}</b>
+        <b>${sp.shiny ? '<span class="shiny-mark">✨</span>' : ''}${escapeHtml(o.nickname || o.pokemon.nameKo)} ${lvHtml(o)} ${legendMark(o.pokemon)}</b>
         <div>${typeChips(o.pokemon.typesKo)} ${skillChip(sk)} ${matchup(o)}</div>
-        <div class="pc-stats">❤${c.hp} ⚔${c.atk} 🛡${c.def} 💨${c.spd} <small>별당 +${Math.round(c.growth * 100)}%</small></div>
+        <div class="pc-stats">❤${c.hp} ⚔${c.atk} 🛡${c.def} 💨${c.spd} <small>레벨당 +2%</small></div>
         <div class="pc-exp"><i style="width:${expPct}%"></i></div>
       </div>
     </button>`;
@@ -163,7 +164,7 @@ $('party-slots').addEventListener('click', e => {
 });
 
 function renderBring() {
-  const entries = state.shop.entries.filter(e => e.item && ['HEAL', 'BUFF_ATTACK', 'BUFF_SPEED', 'BUFF_DEFENSE'].includes(e.use));
+  const entries = state.shop.entries.filter(e => e.item && ['HEAL', 'REVIVE', 'BUFF_ATTACK', 'BUFF_SPEED', 'BUFF_DEFENSE', 'BUFF_CRIT', 'BUFF_EXP', 'BUFF_GOLD'].includes(e.use));
   const owned = entries.filter(e => e.qty > 0);
   $('bring').innerHTML = owned.length ? owned.map(e => {
     const n = state.bring[e.code] || 0, max = Math.min(e.qty, e.use === 'HEAL' ? 5 : 1);
@@ -172,7 +173,7 @@ function renderBring() {
       <div><b>${escapeHtml(e.item.nameKo)}</b><small>${escapeHtml(e.desc)} · 보유 ${e.qty}</small></div>
       <div class="cnt"><button data-d="-1" ${n ? '' : 'disabled'}>−</button><span>${n}</span><button data-d="1" ${n < max ? '' : 'disabled'}>＋</button></div>
     </div>`;
-  }).join('') : '<div class="muted">가져갈 상처약·X아이템이 없어요. <a href="/shop.html">상점</a>에서 살 수 있어요.</div>';
+  }).join('') : '<div class="muted">가져갈 상처약·기력의조각·X아이템이 없어요. <a href="/shop.html">상점</a>에서 살 수 있어요.</div>';
 
   const balls = state.shop.entries.filter(e => e.use === 'BALL' && e.qty > 0);
   $('ball-note').innerHTML = balls.length
@@ -231,12 +232,13 @@ const hooks = {
     $('pick-title').textContent = title;
     $('pick-sub').textContent = sub;
     $('pick-cards').innerHTML = cards.map((u, i) => `
-      <button class="pick-card" data-id="${u.id}" style="animation-delay:${i * 0.08}s">
+      <button class="pick-card ${u.kind}${u.lv ? '' : ' new'}" data-id="${u.id}" style="animation-delay:${i * 0.08}s;--c:${u.color || '#ffd84a'}">
         <span class="pk-key">${i + 1}</span>
-        <span class="pk-icon">${u.icon}</span>
+        ${u.kind !== 'awaken' && !u.lv && u.kind !== 'misc' ? '<span class="pk-new">NEW</span>' : ''}
+        <span class="pk-icon">${u.img ? `<img src="${u.img}" alt="" onerror="this.replaceWith(document.createTextNode('${u.icon || '◆'}'))">` : u.icon}</span>
         <b>${escapeHtml(u.name)}</b>
         <small>${escapeHtml(u.desc)}</small>
-        <span class="pk-stack">${'●'.repeat(u.stack)}${'○'.repeat(u.max - u.stack)}</span>
+        ${u.max ? `<span class="pk-stack">${'●'.repeat(u.lv)}${'○'.repeat(Math.max(0, u.max - u.lv))}</span>` : ''}
       </button>`).join('');
     $('pick').classList.remove('hidden');
     SFX.play('open');
@@ -245,16 +247,19 @@ const hooks = {
       state.choosePick = null;
       choose(id);
       renderBuffs();
+      renderPartyHud();
     };
   },
   onBanner(text, kind) { banner(text, kind); },
   onWarning(boss, shiny) {
-    $('warn-sub').innerHTML = `체육관 관장의 ${shiny ? '✨이로치 ' : ''}<b>${escapeHtml(boss.nameKo)}</b>이(가) 나타난다! ${typeChips(boss.typesKo)}`;
+    $('warn-sub').innerHTML = `${boss.legendary ? '★ 전설의 포켓몬 ' : '보스 '}${shiny ? '✨이로치 ' : ''}<b>${escapeHtml(boss.nameKo)}</b>이(가) 나타난다! ${typeChips(boss.typesKo)}`;
+    $('warning').classList.toggle('legend', !!boss.legendary);
     $('warning').classList.remove('hidden');
     setTimeout(() => $('warning').classList.add('hidden'), 3000);
   },
   onBoss(b) {
-    $('bb-name').innerHTML = `${b.shiny ? '<span class="shiny-mark">✨</span>' : ''}관장의 ${escapeHtml(b.p.nameKo)} ${typeChips(b.types)}`;
+    $('bb-name').innerHTML = `${b.shiny ? '<span class="shiny-mark">✨</span>' : ''}${b.legend ? '★ 전설의 포켓몬 ' : '보스 '}${escapeHtml(b.p.nameKo)} <span class="lv">Lv.${state.run.bossLevel}</span> ${typeChips(b.p.typesKo)}`;
+    $('bossbar').classList.toggle('legend', !!b.legend);
     $('bossbar').classList.remove('hidden');
   },
   onHud(g) {
@@ -268,6 +273,8 @@ const hooks = {
     $('tl-text').textContent = g.boss ? (g.boss.state === 'dead' ? '승리!' : '보스전') : `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')} 남음`;
     $('gold').textContent = `💰 ${Math.floor(g.gold)}`;
     $('kills').textContent = `처치 ${g.kills}`;
+    $('xp-fill').style.width = `${Math.min(100, g.xp / xpNeed(g.lv) * 100)}%`;
+    $('xp-lv').textContent = `Lv.${g.lv}`;
     if (g.boss) {
       const b = g.boss;
       $('bb-fill').style.width = `${Math.max(0, b.hp / b.max * 100)}%`;
@@ -301,10 +308,10 @@ function hideBanner() { $('banner').classList.add('hidden'); $('banner').classLi
 
 function renderPartyHud() {
   $('party-hud').innerHTML = state.game.members.map(mb => `
-    <div class="ph" title="${escapeHtml(mb.skill.name)}">
+    <div class="ph${mb.awake ? ' awake' : ''}${mb.legend ? ' legend' : ''}" title="${escapeHtml(mb.skill.name)}" style="--c:${mb.color}">
       <img src="${mb.sprites.still || mb.sprites.front}" alt="">
-      <span>${starsHtml(mb.owned.stars)}</span>
-      <small style="color:${mb.color}">${escapeHtml(mb.skill.name)}</small>
+      <span class="lv">Lv.${mb.owned.level}</span>
+      <small style="color:${mb.color}">${escapeHtml(mb.skill.name)} <b>${mb.awake ? '각성' : `Lv.${mb.slv}`}</b></small>
     </div>`).join('');
 }
 
@@ -322,11 +329,14 @@ $('potions').addEventListener('click', e => {
 function renderBuffs() {
   const g = state.game;
   const chips = (state.run.brought || []).filter(b => b.use.startsWith('BUFF')).map(b => `<span class="buff">${escapeHtml(b.name)}</span>`);
-  Object.entries(g.stacks).forEach(([id, n]) => {
-    const u = UPGRADES.find(x => x.id === id);
-    chips.push(`<span class="buff" title="${escapeHtml(u.desc)}">${u.icon} ${escapeHtml(u.name)}${n > 1 ? ` ×${n}` : ''}</span>`);
-  });
+  if (g.revivesLeft) chips.push(`<span class="buff">기력의조각 ×${g.revivesLeft}</span>`);
   $('buffs').innerHTML = chips.join('');
+  $('items-hud').innerHTML = Object.entries(g.items).map(([id, lv]) => {
+    const h = HELD.find(x => x.id === id);
+    const t = Object.keys(TYPE_ITEM).find(k => TYPE_ITEM[k][0] === id);
+    const name = h ? h.name : TYPE_ITEM[t][1];
+    return `<span class="ih" title="${escapeHtml(name)} Lv.${lv}"><img src="${itemSprite(id)}" alt="" onerror="this.replaceWith(document.createTextNode('${h ? h.icon : '◆'}'))"><em>${lv}</em></span>`;
+  }).join('');
 }
 
 function bindInput(g) {
@@ -404,7 +414,7 @@ function openCapture() {
   $('capture').classList.remove('hidden');
   $('cap-boss').src = bossSprite();
   $('cap-boss').className = 'cap-boss idle';
-  $('cap-title').innerHTML = `${state.run.bossShiny ? '<span class="shiny-mark">✨</span>' : ''}관장의 ${escapeHtml(b.nameKo)}이(가) 지쳐 있다!`;
+  $('cap-title').innerHTML = `${state.run.bossShiny ? '<span class="shiny-mark">✨</span>' : ''}${b.legendary ? '★ 전설의 포켓몬 ' : ''}${escapeHtml(b.nameKo)}이(가) 지쳐 있다!`;
   state.throwsLeft = 3;
   renderBalls(f.balls, f.captureNote);
 }
@@ -417,6 +427,7 @@ function renderBalls(balls, note) {
       <b>${escapeHtml(b.name)}</b>
       <span>×${b.qty}</span>
       <em>${b.rate}%</em>
+      ${b.note ? `<small>${escapeHtml(b.note)}</small>` : ''}
     </button>`).join('') : '<div class="warn">몬스터볼이 없어요! 다음엔 <a href="/shop.html">상점</a>에서 사 오세요.</div>';
 }
 
@@ -537,7 +548,7 @@ function showResult() {
   const f = state.finish, g = state.game;
   $('result').classList.remove('hidden');
   $('res-title').innerHTML = f.won ? '🏆 던전 클리어!' : '💫 눈앞이 캄캄해졌다…';
-  $('res-gold').innerHTML = `<span>💰 +<b id="gold-count">0</b></span><small>${f.won ? '' : '쓰러져서 골드 절반 · '}처치 ${g.kills} · 보유 ${f.walletGold.toLocaleString()}</small>`;
+  $('res-gold').innerHTML = `<span>💰 +<b id="gold-count">0</b></span><small>${f.won ? '' : '쓰러져서 골드 절반 · '}처치 ${g.kills} · 던전 Lv.${g.lv} · 보유 ${f.walletGold.toLocaleString()}</small>`;
   // 골드 숫자 올라가기
   const target = f.gold;
   let cur = 0;
@@ -550,19 +561,19 @@ function showResult() {
 
   $('res-exp').innerHTML = f.exp.map((x, i) => {
     const o = x.owned, sp = spritesOf(o);
-    const up = o.stars > x.starsBefore;
-    const pct = o.nextStarExp ? Math.round((o.exp - o.starExp) / (o.nextStarExp - o.starExp) * 100) : 100;
+    const up = o.level > x.levelBefore;
+    const pct = lvPct(o);
     return `<div class="re-row${up ? ' up' : ''}" style="animation-delay:${0.3 + i * 0.25}s">
       <img src="${sp.front}" alt="">
       <div>
-        <b>${escapeHtml(o.nickname || o.pokemon.nameKo)} ${starsHtml(o.stars)}</b>
+        <b>${escapeHtml(o.nickname || o.pokemon.nameKo)} ${lvHtml(o)}</b>
         <div class="re-bar"><i style="--w:${pct}%"></i></div>
-        <small>경험치 +${x.gained}${o.nextStarExp ? ` · 다음 별까지 ${o.nextStarExp - o.exp}` : ' · 최고 등급!'}</small>
+        <small>경험치 +${x.gained}${o.nextLevelExp ? ` · 다음 레벨까지 ${o.nextLevelExp - o.exp}` : ' · 최고 레벨!'}</small>
       </div>
-      ${up ? '<span class="re-up">★ 별이 올랐다!</span>' : ''}
+      ${up ? `<span class="re-up">▲ 레벨 업! Lv.${x.levelBefore} → ${o.level}</span>` : ''}
     </div>`;
   }).join('');
-  if (f.exp.some(x => x.owned.stars > x.starsBefore)) setTimeout(() => SFX.play('starup'), 900);
+  if (f.exp.some(x => x.owned.level > x.levelBefore)) setTimeout(() => SFX.play('starup'), 900);
 
   const c = state.caught;
   $('res-caught').innerHTML = c

@@ -1,36 +1,60 @@
 /* =========================================================
- * 오늘의 던전 - 3분 서바이벌 + 관장 보스전 (캔버스 엔진)
+ * 오늘의 던전 - 3분 서바이벌 + 보스전 (캔버스 엔진, 뱀파이어 서바이벌식)
  *
- *  0:00 강화 → 몰려오는 야생 포켓몬 → 1:00 강화 → 2:00 강화 → 3:00 정리, 보스 직전 강화
- *  → WARNING → 관장의 보스 (2페이즈) → 쓰러뜨리면 포획 화면 (dungeon.js)
+ *  입장 강화 → 몰려오는 야생 포켓몬 → 경험치 결정 줍기 → 레벨 업마다 카드 3장 중 하나
+ *  (기술 레벨 업 · 지닌 물건 · 각성) → 1:30 중간 보스 → 3:00 정리, 보스 직전 강화
+ *  → WARNING → 보스 (타입별 고유 패턴, 2페이즈) → 쓰러뜨리면 포획 화면 (dungeon.js)
  *
- *  파티 포켓몬은 첫 번째 타입에 따라 공격 방식이 정해지고 자동으로 공격.
- *  상성(TYPE_CHART)·치명타·강화가 피해에 반영.
+ *  파티 포켓몬은 대표 타입(mainType)의 기술로 자동 공격. 상성·치명타·지닌 물건이 피해에 반영.
  * ========================================================= */
 
 const ARENA = 2400;            // 경기장 한 변 (월드 단위 = 화면 px × 배율)
 const TILE = 32;
 const RUN_TIME = 180;          // 보스까지 3분
-const PICK_TIMES = [60, 120];  // 입장(0초)과 보스 직전은 따로
-const ELITE_TIMES = [30, 75, 100, 140, 165];
+const MID_BOSS_TIME = 90;      // 중간 보스
+const ELITE_TIMES = [30, 65, 115, 145, 165];
 const SWARM_TIMES = [50, 110, 160];
+const SKILL_MAX = 8;
+const ITEM_MAX = 5;
+const ITEM_SLOTS = 6;
+const EXPLODERS = new Set([74, 75, 76, 100, 101, 109, 110, 299, 337, 338, 343, 344, 436, 437]);
+const xpNeed = lv => Math.round(4 + lv * 3 + lv * lv * 0.2);
+const itemSprite = id => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${id}.png`;
 
-/* ---------- 강화 (각각 조금씩, 최대 중첩 수 있음) ---------- */
-const UPGRADES = [
-  { id: 'dmg', icon: '⚔', name: '공격력', desc: '모든 공격 피해 +10%', max: 3, apply: m => { m.dmg *= 1.10; } },
-  { id: 'rate', icon: '⏩', name: '공격 속도', desc: '공격 간격 -10%', max: 3, apply: m => { m.rate *= 1.10; } },
-  { id: 'area', icon: '◎', name: '범위', desc: '폭발·장판·궤도·빔 범위 +15%', max: 3, apply: m => { m.area *= 1.15; } },
-  { id: 'extra', icon: '✚', name: '추가 발사', desc: '투사체·연쇄·궤도 수 +1', max: 2, apply: m => { m.extra += 1; } },
-  { id: 'move', icon: '👟', name: '발 빠르게', desc: '이동 속도 +8%', max: 3, apply: m => { m.move *= 1.08; } },
-  { id: 'maxhp', icon: '❤', name: '튼튼함', desc: '최대 체력 +12%, 체력 30% 회복', max: 3,
-    apply: (m, g) => { g.player.maxHp *= 1.12; g.heal(g.player.maxHp * 0.3); } },
-  { id: 'leech', icon: '🩸', name: '흡수', desc: '쓰러뜨릴 때마다 체력 +1', max: 3, apply: m => { m.leech += 1; } },
-  { id: 'magnet', icon: '🧲', name: '자석', desc: '골드·구슬 줍는 범위 +40%', max: 2, apply: m => { m.magnet *= 1.4; } },
-  { id: 'greed', icon: '💰', name: '욕심', desc: '줍는 골드 +15%', max: 3, apply: m => { m.gold *= 1.15; } },
-  { id: 'crit', icon: '✦', name: '급소 노리기', desc: '치명타 확률 +8% (피해 1.5배)', max: 3, apply: m => { m.crit += 0.08; } },
-  { id: 'armor', icon: '🛡', name: '단단해지기', desc: '받는 피해 -8%', max: 3, apply: m => { m.armor *= 0.92; } },
-  { id: 'super', icon: '🎯', name: '상성 집중', desc: '효과가 굉장한 공격 +15%', max: 2, apply: m => { m.superEff *= 1.15; } },
+/* ---------- 지닌 물건 (레벨 업 카드) ---------- */
+const TYPE_ITEM = {
+  '불꽃': ['charcoal', '목탄'], '물': ['mystic-water', '신비의물방울'], '풀': ['miracle-seed', '기적의씨'],
+  '전기': ['magnet', '자석'], '얼음': ['never-melt-ice', '녹지않는얼음'], '격투': ['black-belt', '검은띠'],
+  '독': ['poison-barb', '독바늘'], '땅': ['soft-sand', '부드러운모래'], '비행': ['sharp-beak', '예리한부리'],
+  '에스퍼': ['twisted-spoon', '휘어진스푼'], '벌레': ['silver-powder', '은빛가루'], '바위': ['hard-stone', '딱딱한돌'],
+  '고스트': ['spell-tag', '저주의부적'], '드래곤': ['dragon-fang', '용의이빨'], '악': ['black-glasses', '검은안경'],
+  '강철': ['metal-coat', '금속코트'], '페어리': ['pixie-plate', '정령플레이트'], '노말': ['silk-scarf', '실크스카프'],
+};
+const HELD = [
+  { id: 'life-orb', name: '생명의구슬', icon: '🔮', desc: '모든 공격 피해 +10%', apply: g => { g.mods.dmg *= 1.10; } },
+  { id: 'quick-claw', name: '선제공격손톱', icon: '⏩', desc: '공격 간격 -8%', apply: g => { g.mods.rate *= 1.08; } },
+  { id: 'wide-lens', name: '광각렌즈', icon: '◎', desc: '폭발·장판·궤도·빔 범위 +10%', apply: g => { g.mods.area *= 1.10; } },
+  { id: 'scope-lens', name: '초점렌즈', icon: '✦', desc: '치명타 확률 +6%', apply: g => { g.mods.crit += 0.06; } },
+  { id: 'choice-scarf', name: '구애스카프', icon: '👟', desc: '이동 속도 +7%', apply: g => { g.mods.move *= 1.07; } },
+  { id: 'leftovers', name: '먹다남은음식', icon: '🍎', desc: '1초마다 최대 체력의 0.4% 회복', apply: g => { g.mods.regen += 0.004; } },
+  { id: 'shell-bell', name: '조개껍질방울', icon: '🐚', desc: '쓰러뜨릴 때마다 체력 +1', apply: g => { g.mods.leech += 1; } },
+  { id: 'rocky-helmet', name: '울퉁불퉁멧', icon: '🪖', desc: '받는 피해 -8%, 부딪힌 적에게 반격', apply: g => { g.mods.armor *= 0.92; g.mods.thorns += 6; } },
+  { id: 'expert-belt', name: '달인의띠', icon: '🎯', desc: '효과가 굉장한 공격 +12%', apply: g => { g.mods.superEff *= 1.12; } },
+  { id: 'exp-share', name: '학습장치', icon: '🧲', desc: '경험치·골드 줍는 범위 +30%', apply: g => { g.mods.magnet *= 1.3; } },
+  { id: 'lucky-egg', name: '행복의알', icon: '🥚', desc: '얻는 경험치 +12%', apply: g => { g.mods.xp *= 1.12; } },
+  { id: 'amulet-coin', name: '부적금화', icon: '💰', desc: '줍는 골드 +12%', apply: g => { g.mods.gold *= 1.12; } },
+  { id: 'kings-rock', name: '왕의징표석', icon: '👑', desc: '공격할 때 4% 확률로 적이 풀죽어 멈춤', apply: g => { g.mods.flinch += 0.04; } },
+  { id: 'bright-powder', name: '반짝가루', icon: '✨', desc: '적의 공격을 5% 확률로 피함', apply: g => { g.mods.dodge += 0.05; } },
+  { id: 'focus-sash', name: '기합의띠', icon: '🎗', desc: '쓰러질 공격을 1번 버팀 (레벨마다 1번)', max: 3, apply: g => { g.mods.sash += 1; } },
+  { id: 'big-root', name: '큰뿌리', icon: '🌱', desc: '최대 체력 +10%, 회복량 +15%', apply: g => { g.player.maxHp *= 1.1; g.player.hp *= 1.1; g.mods.healMul *= 1.15; } },
 ];
+function skillUpDesc(lv) {
+  const d = ['피해 +18%'];
+  if (lv === 3 || lv === 6) d.push('발사 수 +1');
+  if (lv === 2 || lv === 4 || lv === 7) d.push('범위 +10%');
+  if (lv === 5 || lv === 8) d.push('재사용 -8%');
+  return d.join(' · ');
+}
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const pickOne = arr => arr[Math.floor(Math.random() * arr.length)];
@@ -50,8 +74,16 @@ class DungeonGame {
     this.clock = 0;                  // 연출용 전체 시간
     this.phase = 'loading';
     this.picks = 0;
-    this.stacks = {};
-    this.mods = { dmg: 1, rate: 1, area: 1, extra: 0, move: 1, leech: 0, magnet: 1, gold: 1, crit: 0.05, armor: 1, superEff: 1 };
+    this.items = {};       // 지닌 물건 id → 레벨
+    this.typeBoost = {};   // 타입 강화 물건: 타입 → 추가 피해 비율
+    this.lv = 1;
+    this.xp = 0;
+    this.pendingLv = 0;
+    this.mods = { dmg: 1, rate: 1, area: 1, extra: 0, move: 1, leech: 0, magnet: 1, gold: 1, crit: 0.05, armor: 1, superEff: 1,
+      regen: 0, thorns: 0, xp: 1, flinch: 0, dodge: 0, sash: 0, healMul: 1 };
+    this.gems = [];
+    this.chests = [];
+    this.hazards = [];     // 보스가 남긴 장판
     this.enemies = [];
     this.targetsList = [];
     this.shots = [];       // 내 투사체
@@ -81,8 +113,11 @@ class DungeonGame {
       if (b.use === 'BUFF_ATTACK') this.mods.dmg *= 1 + b.value / 100;
       if (b.use === 'BUFF_SPEED') { this.mods.rate *= 1 + b.value / 100; this.mods.move *= 1 + b.value / 100; }
       if (b.use === 'BUFF_DEFENSE') this.mods.armor *= 1 - b.value / 100;
+      if (b.use === 'BUFF_CRIT') this.mods.crit += b.value / 100;
     });
     this.potions = (start.brought || []).filter(b => b.use === 'HEAL').map(b => ({ ...b, left: b.qty }));
+    this.revive = (start.brought || []).find(b => b.use === 'REVIVE');
+    this.revivesLeft = this.revive ? this.revive.qty : 0;
 
     const party = start.party;
     const hp = 50 + party.reduce((n, m) => n + m.combat.hp, 0) * 0.9;
@@ -90,14 +125,17 @@ class DungeonGame {
     this.trail = [];
     this.members = party.map((m, i) => {
       const types = m.owned.pokemon.typesKo;
-      const skill = skillOf(m.owned.pokemon);     // 포켓몬 고유 기술 (dungeon-skills.js)
+      const skill = skillOf(m.owned.pokemon);     // 대표 타입 기술 / 전설은 궁극기 (dungeon-skills.js)
+      const legend = !!skill.legend;
+      const sub = legend ? skillOf({ ...m.owned.pokemon, legendary: false }) : null;   // 전설: 궁극기 사이사이 쓰는 기본기
       const spd = m.combat.speed;
       if (skill.armor) this.mods.armor *= 1 - skill.armor;
       return {
-        i, m, owned: m.owned, types, type: skill.t, pattern: skill.p, skill,
+        i, m, owned: m.owned, types, type: skill.t, pattern: skill.p, skill, sub, legend,
         color: typeColor(skill.t),
-        x: ARENA / 2, y: ARENA / 2, flip: 1, cd: 0.4 + i * 0.25,
+        x: ARENA / 2, y: ARENA / 2, flip: 1, cd: legend ? 1.2 : 0.4 + i * 0.25, cd2: 0.5,
         dmg: 8 + m.combat.attack * 0.12,
+        slv: 1, power: 1, extra: 0, area: 1, awake: false, awT: 4,
         cdMul: clamp(1.25 - spd / 250, 0.75, 1.15),
         angle: i * 2,
         spr: null,
@@ -110,7 +148,7 @@ class DungeonGame {
   async load(progress) {
     const urls = [];
     this.members.forEach(mb => urls.push(mb.sprites.front));
-    this.mobDefs = this.s.mobs.map(p => ({ p, types: p.typesKo }));
+    this.mobDefs = this.s.mobs.map(p => ({ p, types: p.typesKo, main: mainType(p) }));
     this.mobDefs.forEach(d => urls.push(d.p.sprites.frontAnimated || d.p.sprites.frontStatic));
     const bossSpr = this.s.bossShiny ? this.s.boss.sprites.shinyAnimated : this.s.boss.sprites.frontAnimated;
     urls.push(bossSpr);
@@ -220,22 +258,115 @@ class DungeonGame {
     requestAnimationFrame(loop);
   }
 
-  offerPick(title, sub) {
-    const avail = UPGRADES.filter(u => (this.stacks[u.id] || 0) < u.max);
+  /** 카드 3장 만들기: 기술 레벨 업 · 지닌 물건(새로 / 레벨 업) · 각성 */
+  buildCards(n = 3, chest = false) {
+    const pool = [];
+    const own = Object.keys(this.items).length;
+    this.members.forEach(mb => {
+      const tItem = TYPE_ITEM[mb.skill.t]?.[0];
+      if (!mb.awake && mb.slv >= SKILL_MAX && tItem && this.items[tItem]) {
+        pool.push({ id: `aw:${mb.i}`, kind: 'awaken', img: mb.sprites.still || mb.sprites.front, color: mb.color,
+          name: `각성! ${mb.skill.name}`, desc: '피해 ×1.5 · 발사 수 +1 · 4초마다 타입 폭발 · 오라', lv: 0, max: 1, w: chest ? 50 : 8 });
+      }
+      if (mb.slv < SKILL_MAX) {
+        pool.push({ id: `sk:${mb.i}`, kind: 'skill', img: mb.sprites.still || mb.sprites.front, color: mb.color,
+          name: `${mb.skill.name} Lv.${mb.slv + 1}`, desc: skillUpDesc(mb.slv + 1), lv: mb.slv, max: SKILL_MAX, w: 3 });
+      }
+    });
+    [...new Set(this.members.map(mb => mb.skill.t))].forEach(t => {
+      const [id, name] = TYPE_ITEM[t] || [];
+      if (!id) return;
+      const lv = this.items[id] || 0;
+      if (lv >= ITEM_MAX || (!lv && own >= ITEM_SLOTS)) return;
+      pool.push({ id: `it:${id}`, kind: 'item', img: itemSprite(id), icon: '◆', color: typeColor(t),
+        name: `${name}${lv ? ` Lv.${lv + 1}` : ''}`, desc: `${t} 타입 공격 피해 +12%${!lv ? ' · 각성 재료' : ''}`, lv, max: ITEM_MAX, w: 2.6 });
+    });
+    HELD.forEach(h => {
+      const lv = this.items[h.id] || 0, max = h.max || ITEM_MAX;
+      if (lv >= max || (!lv && own >= ITEM_SLOTS)) return;
+      pool.push({ id: `it:${h.id}`, kind: 'item', img: itemSprite(h.id), icon: h.icon, color: '#ffd84a',
+        name: `${h.name}${lv ? ` Lv.${lv + 1}` : ''}`, desc: h.desc, lv, max, w: lv ? 1.8 : 1.3 });
+    });
     const cards = [];
-    while (cards.length < 3 && avail.length) cards.push(avail.splice(Math.floor(Math.random() * avail.length), 1)[0]);
+    while (cards.length < n && pool.length) {
+      let r = Math.random() * pool.reduce((t, c) => t + c.w, 0), k = 0;
+      while (r > pool[k].w) { r -= pool[k].w; k++; }
+      cards.push(pool.splice(Math.min(k, pool.length - 1), 1)[0]);
+    }
+    if (!cards.length) {
+      cards.push({ id: 'heal', kind: 'misc', icon: '🍖', name: '맛있는 열매', desc: '체력 50% 회복', lv: 0, max: 0, color: '#7dffa0' },
+        { id: 'gold', kind: 'misc', icon: '💰', name: '금덩이', desc: '골드 +40', lv: 0, max: 0, color: '#ffd84a' });
+    }
+    return cards;
+  }
+
+  applyCard(id) {
+    const [k, v] = id.split(':');
+    if (k === 'sk') {
+      const mb = this.members[+v];
+      mb.slv++;
+      mb.power += 0.18;
+      if (mb.slv === 3 || mb.slv === 6) mb.extra++;
+      if ([2, 4, 7].includes(mb.slv)) mb.area *= 1.1;
+      if (mb.slv === 5 || mb.slv === 8) mb.cdMul *= 0.92;
+      this.text(mb.x, mb.y - 70, `${mb.skill.name} Lv.${mb.slv}!`, mb.color, 14);
+    } else if (k === 'aw') {
+      const mb = this.members[+v];
+      mb.awake = true;
+      mb.power *= 1.5;
+      mb.extra++;
+      this.hooks.onBanner(`✦ ${mb.owned.nickname || mb.owned.pokemon.nameKo} 각성! ✦`, 'win');
+      this.flash = 0.6;
+      this.shake = 10;
+      this.parts.push({ kind: 'ring', x: mb.x, y: mb.y - 20, r: 10, R: 300, life: 0.6, max: 0.6, color: mb.color, w: 12 });
+      this.burst(mb.x, mb.y - 20, mb.color, 60, 360, 'star');
+      SFX.play('roar');
+    } else if (k === 'it') {
+      const lv = (this.items[v] || 0) + 1;
+      this.items[v] = lv;
+      const type = Object.keys(TYPE_ITEM).find(t => TYPE_ITEM[t][0] === v);
+      if (type) this.typeBoost[type] = lv * 0.12;
+      else HELD.find(h => h.id === v).apply(this);
+    } else if (k === 'heal') {
+      this.heal(this.player.maxHp * 0.5);
+    } else if (k === 'gold') {
+      this.gold += 40 * this.mods.gold;
+    }
+  }
+
+  offerPick(title, sub, chest = false) {
+    const cards = this.buildCards(3, chest);
     this.paused = true;
     this.picks++;
-    this.hooks.onPick(cards.map(u => ({ ...u, stack: this.stacks[u.id] || 0 })), title, sub, id => {
-      const u = UPGRADES.find(x => x.id === id);
-      this.stacks[id] = (this.stacks[id] || 0) + 1;
-      u.apply(this.mods, this);
+    this.picking = true;
+    this.hooks.onPick(cards, title, sub, id => {
+      this.applyCard(id);
       SFX.play('pick');
       this.burst(this.player.x, this.player.y, '#ffe680', 26, 220, 'star');
+      this.picking = false;
+      if (this.pendingLv > 0) {
+        this.pendingLv--;
+        setTimeout(() => this.offerPick(`레벨 ${this.lv - this.pendingLv}!`, '하나 더 골라요'), 120);
+        return;
+      }
       this.paused = false;
       this.afterPick?.();
       this.afterPick = null;
     });
+  }
+
+  gainXp(v) {
+    this.xp += v * this.mods.xp;
+    let ups = 0;
+    while (this.xp >= xpNeed(this.lv)) { this.xp -= xpNeed(this.lv); this.lv++; ups++; }
+    if (!ups) return;
+    SFX.play('starup');
+    this.parts.push({ kind: 'ring', x: this.player.x, y: this.player.y - 20, r: 10, R: 160, life: 0.5, max: 0.5, color: '#7fe0ff', w: 8 });
+    this.burst(this.player.x, this.player.y - 20, '#9fe8ff', 30, 260, 'star');
+    if (this.phase !== 'play') return;
+    if (this.picking) { this.pendingLv += ups; return; }
+    this.pendingLv += ups - 1;
+    this.offerPick(`레벨 ${this.lv - this.pendingLv}!`, '카드를 하나 골라 강해져요');
   }
 
   update(raw) {
@@ -253,6 +384,8 @@ class DungeonGame {
       this.spawn(dt);
     }
     if (this.phase !== 'dead' && this.phase !== 'end') this.movePlayer(dt);
+    if (this.mods.regen && this.phase !== 'dead' && this.phase !== 'end') this.heal(this.player.maxHp * this.mods.regen * dt, true);
+    this.updateHazards(dt);
     this.updateMembers(dt);
     this.updateEnemies(dt);
     if (this.boss) this.updateBoss(dt);
@@ -267,8 +400,10 @@ class DungeonGame {
 
   timeline() {
     const t = this.time;
-    if (this.picks === 1 && t >= PICK_TIMES[0]) this.offerPick('1분 강화', '잘 버티고 있어요! 하나 더');
-    else if (this.picks === 2 && t >= PICK_TIMES[1]) this.offerPick('2분 강화', '이제부터 몬스터가 거세져요');
+    if (t >= MID_BOSS_TIME && !this.events.has('mid')) {
+      this.events.add('mid');
+      this.spawnMid();
+    }
     SWARM_TIMES.forEach(st => {
       if (t >= st && !this.events.has(`sw${st}`)) {
         this.events.add(`sw${st}`);
@@ -296,9 +431,11 @@ class DungeonGame {
     this.enemies.forEach(e => {
       e.dying = 0.6 + Math.random() * 0.5;
     });
+    // 남은 경험치 결정은 모두 빨려 들어옴
+    this.gemRush = true;
     setTimeout(() => {
       this.afterPick = () => this.warning();
-      this.offerPick('보스 직전 강화', '곧 체육관 관장의 포켓몬이 나타나요. 마지막 강화!');
+      this.offerPick('보스 직전 강화', `곧 ${this.s.boss.legendary ? '전설의 포켓몬' : '보스'}이(가) 나타나요. 마지막 강화!`, true);
     }, 1300);
   }
 
@@ -312,17 +449,22 @@ class DungeonGame {
   spawnBoss() {
     const b = this.s.boss, st = b.stats || { hp: 80, attack: 80, defense: 80, speed: 70, bst: 450 };
     const n = this.members.length;
-    const hp = (520 + st.bst * 2.3) * this.diff * (1 + 0.45 * (n - 1));
+    const legend = !!b.legendary;
+    // 런 안에서 레벨 업으로 강해지는 만큼 보스도 튼튼하게
+    const hp = (520 + st.bst * 2.3) * this.diff * (1 + 0.45 * (n - 1)) * (1.5 + this.lv * 0.035) * (legend ? 1.2 : 1);
+    const main = mainType(b);
     const cx = clamp(this.player.x, 700, ARENA - 700), cy = clamp(this.player.y - 220, 700, ARENA - 700);
     this.arenaRing = { x: cx, y: cy + 120, r: 560, a: 0 };
     this.boss = {
-      kind: 'boss', p: b, types: b.typesKo, type: b.typesKo[0], color: typeColor(b.typesKo[0]),
+      kind: 'boss', p: b, types: b.typesKo, type: main, color: typeColor(main), legend,
       spr: this.bossSpr, shiny: this.s.bossShiny,
       x: cx, y: cy, z: 700, hp, max: hp, lag: hp, r: 46, scale: 2.1,
       state: 'enter', timer: 0, phase2: false, flash: 0, flip: 1, last: null, slow: 0,
     };
     this.phase = 'boss';
+    this.gemRush = false;
     this.hooks.onBoss(this.boss);
+    if (legend) this.hooks.onBanner('★ 전설의 포켓몬이 강림했다! ★', 'legend');
   }
 
   /* ---------- 생성 ---------- */
@@ -348,11 +490,20 @@ class DungeonGame {
       x = clamp(this.player.x + Math.cos(a) * r, 60, ARENA - 60);
       y = clamp(this.player.y + Math.sin(a) * r, 60, ARENA - 60);
     }
-    const hp = (8 + st.bst * 0.02) * (1 + t / 60 * 0.5) * this.diff * (0.75 + 0.125 * this.members.length) * (elite ? 10 : 1);
+    let hp = (8 + st.bst * 0.02) * (1 + t / 60 * 0.7) * this.diff * (0.75 + 0.125 * this.members.length) * (elite ? 10 : 1);
     const shiny = Math.random() < 0.04;
+    // 대표 타입에 따라 움직임이 다름
+    const main = d.main;
+    let ai = 'chase';
+    if (EXPLODERS.has(d.p.id)) ai = 'boom';
+    else if (main === '비행') ai = 'zig';
+    else if ((main === '고스트' || main === '에스퍼') && (elite || Math.random() < 0.4)) ai = 'shoot';
+    else if (main === '바위' || main === '강철') ai = 'tank';
+    else if (main === '전기') ai = 'dash';
+    if (ai === 'tank') hp *= 1.6;
     const e = {
-      kind: elite ? 'elite' : 'mob', d, types: d.types, x, y, hp, max: hp,
-      spd: Math.min(95, 46 + st.speed * 0.25) * (elite ? 0.8 : 1) * rand(0.9, 1.1),
+      kind: elite ? 'elite' : 'mob', d, types: d.types, main, ai, x, y, hp, max: hp,
+      spd: Math.min(95, 46 + st.speed * 0.25) * (elite ? 0.8 : 1) * rand(0.9, 1.1) * (ai === 'tank' ? 0.75 : ai === 'zig' ? 1.15 : 1),
       r: elite ? 30 : 16, scale: elite ? 1.25 : 0.8,
       dmg: (5 + t * 0.04) * this.diff * (elite ? 1.6 : 1),
       flash: 0, slow: 0, kx: 0, ky: 0, flip: 1, shiny, phase: Math.random() * 6,
@@ -362,6 +513,19 @@ class DungeonGame {
     if (elite) this.burst(x, y, '#ff5577', 20, 200);
     this.enemies.push(e);
     return e;
+  }
+
+  /** 1:30 중간 보스: 크고 단단하고 탄막을 뿌림. 쓰러뜨리면 보물상자 */
+  spawnMid() {
+    const e = this.spawnEnemy(true);
+    if (!e) return;
+    e.mid = true;
+    e.hp *= 3.5; e.max = e.hp;
+    e.r = 44; e.scale = 1.9; e.ai = 'mid'; e.fireT = 2;
+    e.spd *= 0.85;
+    this.hooks.onBanner(`중간 보스 ${e.d.p.nameKo} 출현!`, 'elite');
+    SFX.play('roar');
+    this.shake = 10;
   }
 
   swarm() {
@@ -413,6 +577,12 @@ class DungeonGame {
   hurt(amount, from) {
     const p = this.player;
     if (p.inv > 0 || this.phase === 'dead' || this.phase === 'end' || this.phase === 'bossdead') return;
+    if (this.mods.dodge && Math.random() < this.mods.dodge) {
+      p.inv = 0.3;
+      this.text(p.x, p.y - 50, 'MISS', '#c9e8ff', 13);
+      return;
+    }
+    if (this.mods.thorns && from && (from.kind === 'mob' || from.kind === 'elite')) this.damage(from, this.mods.thorns * (1 + this.time / 60), '노말', p, 80, true);
     const reduced = amount * this.mods.armor * (100 / (100 + p.def * 0.5));
     p.hp -= reduced;
     p.inv = 0.5;
@@ -426,13 +596,34 @@ class DungeonGame {
       p.x = clamp(p.x + Math.cos(a) * 18, 70, ARENA - 70);
       p.y = clamp(p.y + Math.sin(a) * 18, 70, ARENA - 70);
     }
-    if (p.hp <= 0) this.die();
+    if (p.hp <= 0) {
+      if (this.mods.sash > 0) {
+        this.mods.sash--;
+        p.hp = 1; p.inv = 2;
+        this.hooks.onBanner('기합의띠로 버텼다!', 'info');
+        this.burst(p.x, p.y, '#ffffff', 30, 240, 'star');
+        return;
+      }
+      if (this.revivesLeft > 0) {
+        this.revivesLeft--;
+        this.used[this.revive.code] = (this.used[this.revive.code] || 0) + 1;
+        p.hp = p.maxHp * (this.revive.value || 50) / 100; p.inv = 3;
+        this.hooks.onBanner('기력의조각! 다시 일어섰다!', 'win');
+        this.flash = 0.8;
+        this.parts.push({ kind: 'ring', x: p.x, y: p.y - 20, r: 10, R: 260, life: 0.6, max: 0.6, color: '#ffe680', w: 12 });
+        this.burst(p.x, p.y - 20, '#ffe680', 60, 320, 'star');
+        this.enemies.forEach(e => { if (dist2(e, p) < 260 * 260) { const a = Math.atan2(e.y - p.y, e.x - p.x); e.kx += Math.cos(a) * 400; e.ky += Math.sin(a) * 400; } });
+        SFX.play('heal');
+        return;
+      }
+      this.die();
+    }
   }
 
   heal(n, quiet) {
     const p = this.player;
     const before = p.hp;
-    p.hp = Math.min(p.maxHp, p.hp + n);
+    p.hp = Math.min(p.maxHp, p.hp + n * this.mods.healMul);
     if (!quiet && p.hp - before >= 1) this.text(p.x, p.y - 60, `+${Math.round(p.hp - before)}`, '#6dff8a', 14);
   }
 
@@ -443,6 +634,7 @@ class DungeonGame {
     pt.left--;
     this.used[pt.code] = (this.used[pt.code] || 0) + 1;
     this.heal(this.player.maxHp * pt.value / 100);
+    if (pt.code === 'full-restore') { this.player.inv = 3; this.hooks.onBanner('회복약! 3초 동안 무적', 'info'); }
     SFX.play('heal');
     this.burst(this.player.x, this.player.y, '#7dffa0', 30, 160, 'star');
   }
@@ -476,6 +668,19 @@ class DungeonGame {
       mb.px = mb.x;
       if (this.phase === 'dead' || this.phase === 'end' || this.phase === 'loading') return;
       mb.hop = Math.max(0, (mb.hop || 0) - dt);
+      if (mb.skill.orbitN) this.orbit(mb, dt, { n: mb.skill.orbitN, R: 50, mul: 0.35, kind: mb.skill.orbitKind });
+      if (mb.awake) {
+        mb.awT -= dt;
+        if (mb.awT <= 0 && this.targetsList.length) { mb.awT = 4; this.awakenNova(mb); }
+      }
+      if (mb.sub) {   // 전설: 기본기도 따로 씀
+        mb.cd2 -= dt * this.mods.rate;
+        if (mb.cd2 <= 0) {
+          mb.lastCd = null;
+          const fired = this.attack(mb, mb.sub);
+          mb.cd2 = fired ? (mb.lastCd ?? mb.sub.cd ?? BASE_CD[mb.sub.p] ?? 1) * mb.cdMul * 1.15 : 0.15;
+        }
+      }
       if (mb.pattern === 'orbit') { this.orbit(mb, dt); return; }
       mb.cd -= dt * this.mods.rate;
       if (mb.cd <= 0) {
@@ -483,6 +688,10 @@ class DungeonGame {
         const fired = this.attack(mb);
         const cd = mb.lastCd ?? mb.skill.cd ?? BASE_CD[mb.pattern] ?? 1;
         mb.cd = fired ? cd * mb.cdMul : 0.15;
+        if (fired && mb.legend) {
+          this.text(mb.x, mb.y - 80, `★ ${mb.skill.name}!`, '#ffe680', 16);
+          this.burst(mb.x, mb.y - 30, '#ffe680', 18, 200, 'star');
+        }
       }
     });
   }
@@ -514,7 +723,7 @@ class DungeonGame {
     const speed = o.speed || 460;
     this.shots.push({
       x: mb.x, y: mb.y - 14, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
-      r: o.r || 6, dmg: mb.dmg * this.mods.dmg * (o.mul || 1), type: s.t, color: typeColor(s.t),
+      r: o.r || 6, dmg: mb.dmg * mb.power * this.mods.dmg * (o.mul || 1), type: s.t, color: typeColor(s.t),
       life: o.life || 1.3, pierce: o.pierce || 1, hit: new Map(), kind: o.kind || 'bolt', t0: this.clock, ...o,
     });
   }
@@ -527,24 +736,35 @@ class DungeonGame {
     if (this.parts.length < 700) this.parts.push({ kind, x, y, vx, vy, life, max: life, size, color });
   }
 
-  attack(mb) {
-    const s = mb.skill, P = s.p;
-    const self = ['aura', 'quake', 'wave', 'sing', 'selfdestruct', 'splash', 'heal'].includes(P);
-    const tgt = this.nearest(mb, P === 'melee' || P === 'whip' ? 150 : 440);
+  attack(mb, s = mb.skill) {
+    const P = s.p;
+    const self = ['aura', 'quake', 'wave', 'sing', 'selfdestruct', 'splash', 'heal', 'pillars', 'timestop', 'mines', 'starfall', 'legendrandom'].includes(P);
+    const tgt = this.nearest(mb, P === 'melee' || P === 'whip' ? 150 : P === 'sweep' || P === 'rend' ? 520 : 440);
     if (!tgt && !self) return false;
     if (P === 'sing' && !this.nearest(mb, (s.R || 190) * this.mods.area)) return false;
+    if (s.legend && !this.nearest(mb, 520)) return false;
     const ang = tgt ? Math.atan2(tgt.y - mb.y, tgt.x - mb.x) : 0;
-    return CAST[P](this, mb, s, tgt, ang, mb.dmg * this.mods.dmg);
+    return CAST[P](this, mb, s, tgt, ang, mb.dmg * mb.power * this.mods.dmg);
   }
 
-  orbit(mb, dt) {
-    const s = mb.skill;
-    const n = (s.n || 2) + this.mods.extra;
-    mb.angle += dt * 3.3;
-    const R = (s.R || 72) * this.mods.area;
+  /** 각성: 4초마다 타입색 폭발 고리 */
+  awakenNova(mb) {
+    const n = 18, s = { t: mb.skill.t };
+    for (let i = 0; i < n; i++) this.shot(mb, s, i * Math.PI * 2 / n + this.clock, { mul: 0.9, r: 9, speed: 380, kind: 'orb', pierce: 3, life: 1.1 });
+    this.parts.push({ kind: 'ring', x: mb.x, y: mb.y - 14, r: 10, R: 220, life: 0.45, max: 0.45, color: mb.color, w: 10 });
+    SFX.play('zap', 200);
+  }
+
+  orbit(mb, dt, o) {
+    const s = o || mb.skill;
+    const n = (s.n || 2) + this.mods.extra + mb.extra;
+    if (o) mb.angle2 = (mb.angle2 || 0) + dt * 4; else mb.angle += dt * 3.3;
+    const ang0 = o ? mb.angle2 : mb.angle;
+    const R = (s.R || 72) * this.mods.area * mb.area;
+    mb.orbKind = o ? o.kind : null;
     mb.orbs = [];
     for (let i = 0; i < n; i++) {
-      const a = mb.angle + i * Math.PI * 2 / n;
+      const a = ang0 + i * Math.PI * 2 / n;
       const o = { x: mb.x + Math.cos(a) * R, y: mb.y - 10 + Math.sin(a) * R * 0.8, a };
       mb.orbs.push(o);
       for (const e of this.targetsList) {
@@ -553,7 +773,7 @@ class DungeonGame {
         const last = e.orbHit.get(mb) || 0;
         if (this.clock - last > 0.4) {
           e.orbHit.set(mb, this.clock);
-          this.damage(e, mb.dmg * this.mods.dmg * (s.mul || 0.6), s.t, mb);
+          this.damage(e, mb.dmg * mb.power * this.mods.dmg * (s.mul || 0.6), mb.skill.t, mb);
         }
       }
     }
@@ -564,8 +784,10 @@ class DungeonGame {
     if (e.hp <= 0 || e.dying) return;
     let mult = typeMultiplier(type, e.types);
     if (mult > 1) mult *= this.mods.superEff;
+    mult *= 1 + (this.typeBoost[type] || 0);
+    if (this.mods.flinch && e.kind !== 'boss' && Math.random() < this.mods.flinch) e.sleep = Math.max(e.sleep || 0, 0.5);
     const crit = Math.random() < this.mods.crit + (from?.crit || 0);
-    const dmg = amount * mult * (crit ? 1.5 : 1) * (e.kind === 'boss' && e.state === 'enter' ? 0 : 1);
+    const dmg = amount * mult * (crit ? 1.5 : 1) * (e.kind === 'boss' && (e.state === 'enter' || e.state === 'vanish') ? 0 : 1);
     if (dmg <= 0) return;
     e.hp -= dmg;
     e.flash = 0.1;
@@ -589,6 +811,7 @@ class DungeonGame {
 
   kill(e) {
     if (e.kind === 'boss') { this.bossDown(); return; }
+    if (e.dead) return;
     e.dead = true;
     this.kills++;
     if (e.kind === 'elite') this.elites++;
@@ -601,6 +824,22 @@ class DungeonGame {
     for (let i = 0; i < coins; i++) this.coins.push({ x: e.x, y: e.y, vx: rand(-120, 120), vy: rand(-160, -40), v: val, t: 0 });
     if (e.shiny) { for (let i = 0; i < 4; i++) this.coins.push({ x: e.x, y: e.y, vx: rand(-150, 150), vy: rand(-180, -40), v: 3, t: 0 }); }
     if (Math.random() < (e.kind === 'elite' ? 1 : 0.018)) this.orbs.push({ x: e.x, y: e.y, amt: e.kind === 'elite' ? 0.2 : 0.08, t: 0 });
+    // 경험치 결정
+    const gv = e.mid ? 40 : e.kind === 'elite' ? 12 : 1 + (this.time > 60 ? 1 : 0) + (this.time > 125 ? 1 : 0);
+    this.dropGem(e.x + rand(-6, 6), e.y + rand(-6, 6), gv);
+    if (e.kind === 'elite') {
+      this.chests.push({ x: e.x, y: e.y, t: 0, big: !!e.mid });
+      if (e.mid) { this.hooks.onBanner('중간 보스를 쓰러뜨렸다! 보물상자!', 'win'); SFX.play('win'); }
+    }
+  }
+
+  dropGem(x, y, v) {
+    if (this.gems.length >= 450) {   // 너무 많으면 가장 오래된 결정에 합침
+      const g = this.gems[0];
+      g.v += v;
+      return;
+    }
+    this.gems.push({ x, y, v, t: 0 });
   }
 
   /* ---------- 몬스터 ---------- */
@@ -624,10 +863,52 @@ class DungeonGame {
         e.kx *= Math.pow(0.02, dt); e.ky *= Math.pow(0.02, dt);
         continue;
       }
-      const spd = e.spd * (e.slow > 0 ? 0.55 : 1);
+      let spd = e.spd * (e.slow > 0 ? 0.55 : 1);
       const a = Math.atan2(p.y - e.y, p.x - e.x);
-      e.x += (Math.cos(a) * spd + e.kx) * dt;
-      e.y += (Math.sin(a) * spd + e.ky) * dt;
+      let mv = a;
+      const d = Math.sqrt(dist2(e, p));
+      if (e.ai === 'zig') { mv = a + Math.sin(e.phase * 3.2) * 0.9; }
+      else if (e.ai === 'dash') {
+        e.dashT = (e.dashT ?? rand(1, 3)) - dt;
+        if (e.dashT < 0) {
+          spd *= 3.2;
+          if (Math.random() < 0.3) this.part('spark', e.x, e.y - 10, rand(-30, 30), rand(-30, 30), 0.2, 3, '#fff27a');
+          if (e.dashT < -0.35) e.dashT = rand(2, 3.5);
+        }
+      } else if (e.ai === 'shoot' || e.ai === 'mid') {
+        if (e.ai === 'shoot') { if (d < 230) spd *= -0.5; else if (d < 320) spd = 0; }
+        e.fireT = (e.fireT ?? rand(1.5, 3)) - dt;
+        if (e.fireT <= 0 && d < 520 && this.phase === 'play') {
+          const col = typeColor(e.main), dm = 4 * this.diff * (1 + this.time / 120);
+          if (e.ai === 'mid') {
+            e.fireT = 2.4;
+            const off = Math.random();
+            for (let k = 0; k < 14; k++) this.ebullet(e.x, e.y - 30, off + k * Math.PI * 2 / 14, 170, col, dm * 1.4, 8);
+            SFX.play('explode', 200);
+          } else {
+            e.fireT = rand(2.8, 3.8);
+            this.ebullet(e.x, e.y - 14, a, 170, col, dm, 6);
+          }
+        }
+      } else if (e.ai === 'boom') {
+        if (e.fuse !== undefined) {
+          e.fuse -= dt;
+          spd = 0;
+          if (e.fuse <= 0) {
+            if (d < 80) this.hurt(e.dmg * 2.2, e);
+            this.burst(e.x, e.y - 10, '#ffb238', 30, 280);
+            this.burst(e.x, e.y - 10, '#ffffff', 12, 200);
+            this.parts.push({ kind: 'ring', x: e.x, y: e.y - 10, r: 8, R: 80, life: 0.3, max: 0.3, color: '#ffb238', w: 8 });
+            SFX.play('explode', 120);
+            this.shake = Math.max(this.shake, 5);
+            e.hp = 0;
+            this.kill(e);
+            continue;
+          }
+        } else if (d < 60) { e.fuse = 0.6; }
+      }
+      e.x += (Math.cos(mv) * spd + e.kx) * dt;
+      e.y += (Math.sin(mv) * spd + e.ky) * dt;
       e.kx *= Math.pow(0.02, dt); e.ky *= Math.pow(0.02, dt);
       e.flip = p.x > e.x ? -1 : 1;
       if (this.phase !== 'dead' && dist2(e, p) < (e.r + 16) ** 2) this.hurt(e.dmg, e);
@@ -725,18 +1006,65 @@ class DungeonGame {
         }
         if (b.timer <= 0) { b.state = 'idle'; b.timer = 0.8; }
         break;
+      case 'laser': {
+        b.timer -= dt;
+        b.laserA += b.spinDir * 1.25 * rate * dt;
+        const bx = b.x, by = b.y - 30, dx = p.x - bx, dy = p.y - by;
+        const along = dx * Math.cos(b.laserA) + dy * Math.sin(b.laserA), side = -dx * Math.sin(b.laserA) + dy * Math.cos(b.laserA);
+        if (along > 0 && along < 760 && Math.abs(side) < 30) this.hurt(14 * this.diff, null);
+        if (Math.random() < 0.8) {
+          const r = rand(40, 760);
+          this.part('spark', bx + Math.cos(b.laserA) * r, by + Math.sin(b.laserA) * r, rand(-80, 80), rand(-80, 80), 0.3, 4, pickOne([b.color, '#ffffff']));
+        }
+        if (b.timer <= 0) { b.state = 'idle'; b.timer = 0.9 / rate; }
+        break;
+      }
+      case 'vanish':
+        b.timer -= dt;
+        if (b.timer <= 0) {
+          const a = Math.random() * Math.PI * 2;
+          b.x = p.x + Math.cos(a) * 170; b.y = p.y + Math.sin(a) * 170;
+          if (this.arenaRing) {
+            const r = this.arenaRing, dd = Math.hypot(b.x - r.x, b.y - r.y);
+            if (dd > r.r - 60) { b.x = r.x + (b.x - r.x) / dd * (r.r - 60); b.y = r.y + (b.y - r.y) / dd * (r.r - 60); }
+          }
+          b.state = 'tele'; b.attack = 'reappear'; b.timer = 0.55;
+          this.teles.push({ kind: 'circle', x: b.x, y: b.y, r: 130, life: 0.55, max: 0.55, color: '#b28cff', dmg: 16 * this.diff, boom: true });
+        }
+        break;
+      case 'pull': {
+        b.timer -= dt;
+        const d = Math.hypot(p.x - b.x, p.y - b.y);
+        if (d > 90) { p.x -= (p.x - b.x) / d * 120 * dt; p.y -= (p.y - b.y) / d * 120 * dt; }
+        b.spinT = (b.spinT || 0) - dt;
+        if (b.spinT <= 0) {
+          b.spinT = 0.16;
+          b.spinA = (b.spinA || 0) + 0.5;
+          for (let k = 0; k < 2; k++) this.ebullet(b.x, b.y - 20, b.spinA + k * Math.PI, 150, b.color);
+        }
+        if (Math.random() < 0.6) {
+          const a = Math.random() * Math.PI * 2, r = rand(200, 380);
+          this.part('puff', b.x + Math.cos(a) * r, b.y + Math.sin(a) * r, -Math.cos(a) * 300, -Math.sin(a) * 300, 0.5, 4, '#9a7aff');
+        }
+        if (b.timer <= 0) { b.state = 'idle'; b.timer = 0.8 / rate; }
+        break;
+      }
       default:
         break;
     }
+    if (b.state === 'vanish') return;
     if (dist2(b, p) < (b.r + 18) ** 2) this.hurt(b.state === 'dash' ? 18 * this.diff : 13 * this.diff, b);
   }
 
-  bossName() { return `관장의 ${this.s.boss.nameKo}`; }
+  bossName() { return `${this.s.boss.legendary ? '전설의 포켓몬 ' : '보스 '}${this.s.boss.nameKo}`; }
 
   bossChoose() {
     const b = this.boss, p = this.player;
-    const opts = ['charge', 'burst', 'slam', 'summon', 'burst', 'charge'];
-    if (b.phase2) opts.push('spiral', 'spiral', 'slam');
+    const opts = ['charge', 'burst', 'slam', 'summon'];
+    const sig = BOSS_SIG[b.type] || ['waves', 'meteors'];
+    opts.push(...sig, ...sig);                // 타입 고유 패턴은 더 자주
+    if (b.legend) opts.push('spiral', ...sig);
+    if (b.phase2) opts.push('spiral', ...sig);
     let pick;
     do { pick = pickOne(opts); } while (pick === b.last && Math.random() < 0.7);
     b.last = pick;
@@ -769,7 +1097,110 @@ class DungeonGame {
     } else if (pick === 'spiral') {
       b.timer = 0.4;
       this.teles.push({ kind: 'glow', follow: b, life: 0.4, max: 0.4, color: '#ff3355' });
+    } else this.bossSigTele(pick);
+  }
+
+  /* ---------- 보스 타입 고유 패턴: 예고 ---------- */
+  bossSigTele(pick) {
+    const b = this.boss, p = this.player, dm = this.diff;
+    const alive = () => this.phase === 'boss' && this.boss && this.boss.hp > 0;
+    if (pick === 'laser') {
+      b.spinDir = Math.random() < 0.5 ? 1 : -1;
+      b.laserA = Math.atan2(p.y - b.y, p.x - b.x) - b.spinDir * 1.0;
+      b.timer = 0.9;
+      this.teles.push({ kind: 'line', x: b.x, y: b.y - 30, a: b.laserA, len: 760, w: 44, life: 0.9, max: 0.9, follow: b });
+      this.teles.push({ kind: 'glow', follow: b, life: 0.9, max: 0.9, color: b.color });
+    } else if (pick === 'meteors') {
+      b.timer = 0.3;
+      const n = b.phase2 || b.legend ? 12 : 8;
+      for (let i = 0; i < n; i++) {
+        setTimeout(() => {
+          if (!alive()) return;
+          const q = this.player;
+          this.teles.push({ kind: 'circle', x: q.x + rand(-260, 260), y: q.y + rand(-200, 200), r: 70, life: 1.0, max: 1.0,
+            color: b.color, dmg: 14 * dm, boom: true, rock: true });
+          if (i === 0) this.teles.push({ kind: 'circle', x: q.x, y: q.y, r: 70, life: 1.0, max: 1.0, color: b.color, dmg: 14 * dm, boom: true, rock: true });
+        }, i * 110);
+      }
+    } else if (pick === 'puddles') {
+      b.timer = 0.5;
+      const n = b.phase2 ? 6 : 4;
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2, r = i === 0 ? 0 : rand(90, 260);
+        this.teles.push({ kind: 'circle', x: p.x + Math.cos(a) * r, y: p.y + Math.sin(a) * r, r: 82, life: 0.9, max: 0.9, color: b.color, puddle: true });
+      }
+    } else if (pick === 'grid') {
+      b.timer = 0.3;
+      const n = b.phase2 ? 5 : 3;
+      for (let i = 0; i < n; i++) {
+        setTimeout(() => {
+          if (!alive()) return;
+          const q = this.player, hor = i % 2 === 0, off = (i - (n - 1) / 2) * 30 + rand(-20, 20);
+          this.teles.push(hor
+            ? { kind: 'line', x: q.x - 800, y: q.y + off, a: 0, len: 1600, w: 46, life: 0.85, max: 0.85, boom: true, dmg: 15 * dm, color: b.color, zap: true }
+            : { kind: 'line', x: q.x + off, y: q.y - 800, a: Math.PI / 2, len: 1600, w: 46, life: 0.85, max: 0.85, boom: true, dmg: 15 * dm, color: b.color, zap: true });
+        }, i * 260);
+      }
+    } else if (pick === 'teleport') {
+      b.timer = 0.45;
+      this.teles.push({ kind: 'glow', follow: b, life: 0.45, max: 0.45, color: '#b28cff' });
+    } else if (pick === 'waves') {
+      b.timer = 0.4;
+      this.teles.push({ kind: 'glow', follow: b, life: 0.4, max: 0.4, color: b.color });
+    } else if (pick === 'pull') {
+      b.timer = 0.6;
+      this.teles.push({ kind: 'glow', follow: b, life: 0.6, max: 0.6, color: '#7a4fff' });
     }
+  }
+
+  /* ---------- 보스 타입 고유 패턴: 실행 ---------- */
+  bossSigAct(pick) {
+    const b = this.boss, p = this.player, rate = b.phase2 ? 1.35 : 1;
+    if (pick === 'laser') {
+      b.state = 'laser'; b.timer = 2.2;
+      SFX.play('zap'); SFX.play('explode');
+      this.shake = 8;
+    } else if (pick === 'meteors' || pick === 'grid') {
+      b.state = 'idle'; b.timer = 2.0 / rate;
+    } else if (pick === 'puddles') {
+      b.state = 'idle'; b.timer = 1.4 / rate;
+    } else if (pick === 'teleport') {
+      b.state = 'vanish'; b.timer = 0.55;
+      this.burst(b.x, b.y - 40, '#b28cff', 30, 260);
+      SFX.play('tele');
+    } else if (pick === 'waves') {
+      const rings = b.phase2 || b.legend ? 4 : 3;
+      for (let r = 0; r < rings; r++) {
+        setTimeout(() => {
+          if (!this.boss || this.boss.hp <= 0 || this.phase !== 'boss') return;
+          const n = 30, gap = Math.atan2(this.player.y - this.boss.y, this.player.x - this.boss.x) + rand(-1.2, 1.2);
+          for (let i = 0; i < n; i++) {
+            const a = i * Math.PI * 2 / n;
+            let da = a - gap;
+            while (da > Math.PI) da -= Math.PI * 2;
+            while (da < -Math.PI) da += Math.PI * 2;
+            if (Math.abs(da) < 0.42) continue;      // 빠져나갈 틈
+            this.ebullet(this.boss.x, this.boss.y - 20, a, 190, r % 2 ? '#ffffff' : this.boss.color);
+          }
+          SFX.play('explode', 100);
+        }, r * 480);
+      }
+      b.state = 'idle'; b.timer = (0.5 + rings * 0.48) / rate;
+    } else if (pick === 'pull') {
+      b.state = 'pull'; b.timer = 2.4;
+      SFX.play('roar');
+    }
+  }
+
+  updateHazards(dt) {
+    const p = this.player;
+    for (const h of this.hazards) {
+      h.life -= dt;
+      h.tick -= dt;
+      if (h.tick <= 0 && dist2(h, p) < (h.r + 8) ** 2) { h.tick = 0.5; this.hurt(h.dmg, null); }
+      if (Math.random() < 0.15) this.part('puff', h.x + rand(-h.r, h.r) * 0.7, h.y + rand(-h.r, h.r) * 0.4, 0, -20, 0.6, rand(4, 8), h.color);
+    }
+    this.hazards = this.hazards.filter(h => h.life > 0);
   }
 
   bossAct() {
@@ -800,6 +1231,13 @@ class DungeonGame {
       case 'slam':
         b.state = 'idle'; b.timer = 1.6 / rate;
         break;
+      case 'reappear': {
+        const n = 16, off = Math.random();
+        for (let i = 0; i < n; i++) this.ebullet(b.x, b.y - 20, off + i * Math.PI * 2 / n, 210, '#c9a6ff');
+        this.burst(b.x, b.y - 30, '#b28cff', 40, 300);
+        b.state = 'idle'; b.timer = 1.0 / rate;
+        break;
+      }
       case 'summon': {
         const n = b.phase2 ? 7 : 5;
         for (let i = 0; i < n; i++) {
@@ -815,12 +1253,13 @@ class DungeonGame {
         b.state = 'spiral'; b.timer = 2.0;
         break;
       default:
-        b.state = 'idle'; b.timer = 1;
+        if (BOSS_SIG_ALL.has(b.attack)) this.bossSigAct(b.attack);
+        else { b.state = 'idle'; b.timer = 1; }
     }
   }
 
-  ebullet(x, y, a, speed, color) {
-    this.ebullets.push({ x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, r: 9, dmg: 9 * this.diff, color, life: 4 });
+  ebullet(x, y, a, speed, color, dmg, r) {
+    this.ebullets.push({ x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, r: r || 9, dmg: dmg || 9 * this.diff, color, life: 4 });
   }
 
   bossDown() {
@@ -851,7 +1290,7 @@ class DungeonGame {
     this.kills++;
     setTimeout(() => {
       SFX.play('win');
-      this.hooks.onBanner('관장의 포켓몬을 쓰러뜨렸다!', 'win');
+      this.hooks.onBanner(`${this.bossName()}을(를) 쓰러뜨렸다!`, 'win');
       this.coinRush = true;
     }, 1400);
     setTimeout(() => this.end(true), 3600);
@@ -861,8 +1300,14 @@ class DungeonGame {
   updateShots(dt) {
     for (const s of this.shots) {
       s.life -= dt;
+      if (s.accel) {
+        const sp = Math.hypot(s.vx, s.vy), ns = Math.min(900, sp + s.accel * dt);
+        s.vx *= ns / sp; s.vy *= ns / sp;
+      }
+      if (s.kind === 'missile' && Math.random() < 0.6) this.part('puff', s.x, s.y, rand(-15, 15), rand(-15, 15), 0.4, rand(3, 5), '#9aa3b5');
+      if ((s.kind === 'wisp' || s.kind === 'spear') && Math.random() < 0.5) this.part('puff', s.x + rand(-4, 4), s.y + rand(-4, 4), 0, -30, 0.35, rand(3, 6), s.color);
       if (s.homing) {
-        const t = this.nearest(s, 400);
+        const t = this.nearest(s, s.kind === 'missile' || s.kind === 'spear' ? 700 : 400);
         if (t) {
           const want = Math.atan2(t.y - s.y, t.x - s.x), cur = Math.atan2(s.vy, s.vx);
           let diff = want - cur;
@@ -971,8 +1416,8 @@ class DungeonGame {
         if (!f.landed && f.life <= 0.12) {
           f.landed = true;
           for (const e of this.targetsList) if (e.hp > 0 && dist2(f, e) < (f.r + e.r) ** 2) this.damage(e, f.dmg, f.type, f, 120);
-          this.burst(f.x, f.y, '#b08d57', 18, 220);
-          this.parts.push({ kind: 'ring', x: f.x, y: f.y, r: 5, R: f.r * 1.2, life: 0.25, max: 0.25, color: '#e8d4a8', w: 5 });
+          this.burst(f.x, f.y, f.legend ? f.color : '#b08d57', f.legend ? 26 : 18, f.legend ? 300 : 220, f.legend ? 'star' : 'spark');
+          this.parts.push({ kind: 'ring', x: f.x, y: f.y, r: 5, R: f.r * 1.2, life: 0.25, max: 0.25, color: f.legend ? f.color : '#e8d4a8', w: 5 });
           this.shake = Math.max(this.shake, 4);
           SFX.play('slam', 150);
         }
@@ -995,6 +1440,69 @@ class DungeonGame {
         }
       } else if (f.kind === 'charge' && f.mb) {
         f.x = f.mb.x; f.y = f.mb.y - 14;
+      } else if (f.kind === 'mine') {
+        f.arm -= dt;
+        if (f.arm <= 0) {
+          for (const e of this.targetsList) {
+            if (e.hp > 0 && dist2(f, e) < (f.r * 0.55 + e.r) ** 2) {
+              this.explode(f.x, f.y, f.r, f.dmg, f.type, f.color, true);
+              f.life = 0;
+              break;
+            }
+          }
+        }
+      } else if (f.kind === 'sweep') {
+        f.x = f.mb.x; f.y = f.mb.y - 14;
+        f.a += dt * 2.8;
+        f.tick -= dt;
+        if (f.tick <= 0) {
+          f.tick = f.every;
+          for (const e of this.targetsList) {
+            const dx = e.x - f.x, dy = e.y - f.y;
+            const along = dx * Math.cos(f.a) + dy * Math.sin(f.a), side = -dx * Math.sin(f.a) + dy * Math.cos(f.a);
+            if (e.hp > 0 && along > 0 && along < f.len && Math.abs(side) < f.w / 2 + e.r) this.damage(e, f.dmg, f.type, f, 30, true);
+          }
+        }
+        for (let i = 0; i < 2; i++) {
+          const r = rand(30, f.len);
+          this.part('spark', f.x + Math.cos(f.a) * r, f.y + Math.sin(f.a) * r, rand(-90, 90), rand(-90, 90), 0.35, rand(3, 5), pickOne([f.color, '#ffffff']));
+        }
+      } else if (f.kind === 'blackhole') {
+        f.tick -= dt;
+        const hit = f.tick <= 0;
+        if (hit) f.tick = f.every;
+        for (const e of this.targetsList) {
+          if (e.hp <= 0) continue;
+          const d2 = dist2(f, e);
+          if (d2 > f.r * f.r) continue;
+          if (e.kind !== 'boss') {
+            const d = Math.sqrt(d2) || 1, pull = 260 * dt * (e.kind === 'elite' ? 0.4 : 1);
+            e.x -= (e.x - f.x) / d * Math.min(d, pull); e.y -= (e.y - f.y) / d * Math.min(d, pull);
+          }
+          if (hit) this.damage(e, f.dmg, f.type, null, 0, true);
+        }
+        if (Math.random() < 0.9) {
+          const a = Math.random() * Math.PI * 2, r = f.r * rand(0.6, 1);
+          this.part('puff', f.x + Math.cos(a) * r, f.y + Math.sin(a) * r * 0.7, -Math.cos(a) * r * 1.6, -Math.sin(a) * r * 1.1, 0.5, rand(3, 6), pickOne([f.color, '#ffffff', '#3a2a5a']));
+        }
+        if (f.life <= 0 && !f.done) {
+          f.done = true;
+          this.explode(f.x, f.y, f.r * 0.7, f.dmg * 8, f.type, f.color, true);
+          this.parts.push({ kind: 'ring', x: f.x, y: f.y, r: 10, R: f.r * 1.3, life: 0.5, max: 0.5, color: f.color, w: 14 });
+          this.flash = Math.max(this.flash, 0.4);
+          this.shake = Math.max(this.shake, 14);
+        }
+      } else if (f.kind === 'rend') {
+        if (!f.hitDone && f.life < f.max * 0.7) {
+          f.hitDone = true;
+          for (const e of this.targetsList) {
+            const dx = e.x - f.x, dy = e.y - f.y;
+            const along = dx * Math.cos(f.a) + dy * Math.sin(f.a), side = -dx * Math.sin(f.a) + dy * Math.cos(f.a);
+            if (e.hp > 0 && Math.abs(along) < f.len / 2 && Math.abs(side) < 40 + e.r) this.damage(e, f.dmg, f.type, f, 160);
+          }
+          this.shake = Math.max(this.shake, 10);
+          this.flash = Math.max(this.flash, 0.25);
+        }
       }
     }
     this.fx = this.fx.filter(f => f.life > 0);
@@ -1003,6 +1511,21 @@ class DungeonGame {
     for (const t of this.teles) {
       t.life -= dt;
       if (t.follow && t.kind !== 'line') { t.x = t.follow.x; t.y = t.follow.y; }
+      if (t.life <= 0 && t.puddle) {
+        this.hazards.push({ x: t.x, y: t.y, r: t.r, life: 5, max: 5, tick: 0, dmg: 6 * this.diff, color: t.color });
+        this.burst(t.x, t.y, t.color, 14, 160);
+        SFX.play('splash', 120);
+        continue;
+      }
+      if (t.life <= 0 && t.boom && t.kind === 'line') {
+        const q = this.player, dx = q.x - t.x, dy = q.y - t.y;
+        const along = dx * Math.cos(t.a) + dy * Math.sin(t.a), side = -dx * Math.sin(t.a) + dy * Math.cos(t.a);
+        if (along > 0 && along < t.len && Math.abs(side) < t.w / 2 + 10) this.hurt(t.dmg, null);
+        this.parts.push({ kind: 'line', x: t.x, y: t.y, a: t.a, len: t.len, w: t.w, life: 0.3, max: 0.3, color: t.color });
+        this.shake = Math.max(this.shake, 7);
+        SFX.play('zap', 80);
+        continue;
+      }
       if (t.life <= 0 && t.boom) {
         if (Math.hypot(this.player.x - t.x, this.player.y - t.y) < t.r + 12) this.hurt(t.dmg, t);
         this.burst(t.x, t.y, t.color, 26, 300);
@@ -1056,6 +1579,36 @@ class DungeonGame {
       if (d < 24) { o.got = true; this.heal(p.maxHp * o.amt); SFX.play('heal'); }
     }
     this.orbs = this.orbs.filter(o => !o.got);
+    for (const g of this.gems) {
+      g.t += dt;
+      const dx = p.x - g.x, dy = p.y - g.y, d = Math.hypot(dx, dy) || 1;
+      if (d < R * 1.1 || this.gemRush || g.pull) {
+        g.pull = true;
+        const sp = this.gemRush ? 1000 : 260 + g.t * 40;
+        g.x += dx / d * Math.min(d, sp * dt); g.y += dy / d * Math.min(d, sp * dt);
+      }
+      if (d < 22) {
+        g.got = true;
+        this.gainXp(g.v);
+        SFX.play('coin', 35);
+      }
+    }
+    if (this.gems.some(g => g.got)) this.gems = this.gems.filter(g => !g.got);
+    for (const ch of this.chests) {
+      ch.t += dt;
+      if (this.phase !== 'play' || this.paused) continue;
+      if (dist2(ch, p) < 34 * 34) {
+        ch.got = true;
+        SFX.play('open');
+        this.flash = 0.4;
+        this.burst(ch.x, ch.y - 10, '#ffd84a', 50, 300, 'star');
+        this.parts.push({ kind: 'ring', x: ch.x, y: ch.y - 10, r: 10, R: 180, life: 0.5, max: 0.5, color: '#ffd84a', w: 10 });
+        for (let i = 0; i < (ch.big ? 30 : 12); i++) this.coins.push({ x: ch.x, y: ch.y, vx: rand(-200, 200), vy: rand(-260, -60), v: 2, t: 0 });
+        this.offerPick(ch.big ? '🎁 커다란 보물상자!' : '🎁 보물상자!', '보물상자에서 고를 수 있어요 (각성이 잘 나와요)', true);
+        break;
+      }
+    }
+    this.chests = this.chests.filter(c => !c.got);
   }
 
   /* ---------- 파티클 ---------- */
@@ -1117,6 +1670,41 @@ class DungeonGame {
     this.drawGroundFx(c);
     this.drawTeles(c);
 
+    // 보스 장판
+    this.hazards.forEach(h => {
+      const k = Math.min(1, h.life, (h.max - h.life) * 4);
+      c.save();
+      c.globalAlpha = 0.55 * k;
+      c.fillStyle = hexA(h.color, 0.6);
+      c.beginPath(); c.ellipse(h.x, h.y, h.r, h.r * 0.62, 0, 0, 7); c.fill();
+      c.globalAlpha = k;
+      c.strokeStyle = hexA(h.color, 0.9); c.lineWidth = 2;
+      c.beginPath(); c.ellipse(h.x, h.y, h.r * (0.9 + Math.sin(this.clock * 4) * 0.05), h.r * 0.56, 0, 0, 7); c.stroke();
+      c.restore();
+    });
+    // 경험치 결정 (크기·색 = 값)
+    this.gems.forEach(g => {
+      if (!inView(g.x, g.y, 30)) return;
+      const big = g.v >= 10, col = g.v >= 10 ? '#ff7ad9' : g.v >= 3 ? '#ff6b6b' : g.v >= 2 ? '#6dff9a' : '#5ec8ff';
+      const s = big ? 9 : 5 + Math.min(2, g.v - 1), y = g.y - 6 + Math.sin(this.clock * 5 + g.x) * 1.5;
+      c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(g.x - s * 0.6, g.y - 1, s * 1.2, 2);
+      c.fillStyle = col;
+      c.beginPath(); c.moveTo(g.x, y - s * 1.4); c.lineTo(g.x + s, y); c.lineTo(g.x, y + s * 1.1); c.lineTo(g.x - s, y); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.75)';
+      c.beginPath(); c.moveTo(g.x, y - s * 1.4); c.lineTo(g.x + s * 0.35, y - s * 0.2); c.lineTo(g.x - s * 0.4, y); c.fill();
+    });
+    // 보물상자
+    this.chests.forEach(ch => {
+      const bob = Math.sin(this.clock * 4) * 2, w = ch.big ? 34 : 26, h = ch.big ? 24 : 18;
+      c.save(); c.globalCompositeOperation = 'lighter';
+      glowDot(c, ch.x, ch.y - 12, 34 + Math.sin(this.clock * 6) * 4, 'rgba(255,210,80,.22)');
+      c.restore();
+      this.shadow(c, ch.x, ch.y, 18);
+      c.fillStyle = '#7a4a1e'; c.fillRect(ch.x - w / 2, ch.y - h + bob, w, h);
+      c.fillStyle = '#a8662a'; c.fillRect(ch.x - w / 2, ch.y - h + bob, w, h * 0.4);
+      c.fillStyle = '#ffd84a'; c.fillRect(ch.x - w / 2, ch.y - h * 0.62 + bob, w, 3); c.fillRect(ch.x - 3, ch.y - h * 0.75 + bob, 6, 8);
+      if (Math.random() < 0.2) this.part('star', ch.x + rand(-w, w) / 2, ch.y - rand(0, 30), 0, -30, 0.5, 3, '#ffe680');
+    });
     // 줍는 것
     this.coins.forEach(k => {
       if (!inView(k.x, k.y)) return;
@@ -1142,6 +1730,7 @@ class DungeonGame {
     bodies.forEach(o => (o.m ? this.drawMember(c, o) : this.drawEnemy(c, o)));
 
     this.drawShots(c);
+    this.drawBossLaser(c);
     this.drawEnemyBullets(c);
     this.drawParticles(c);
     this.drawTexts(c);
@@ -1161,6 +1750,12 @@ class DungeonGame {
       c.fillStyle = `rgba(200,0,30,${0.18 + Math.sin(this.clock * 10) * 0.12})`;
       c.fillRect(0, 0, W, H);
     }
+    const ts = this.fx.find(f => f.kind === 'timestop');
+    if (ts) {
+      const k = ts.life / ts.max;
+      c.fillStyle = `rgba(40,70,140,${0.35 * Math.min(1, k * 3)})`;
+      c.fillRect(0, 0, W, H);
+    }
     if (this.flash > 0) {
       c.fillStyle = `rgba(255,255,255,${this.flash * 0.6})`;
       c.fillRect(0, 0, W, H);
@@ -1169,6 +1764,21 @@ class DungeonGame {
       c.fillStyle = 'rgba(10,10,20,.35)';
       c.fillRect(0, 0, W, H);
     }
+  }
+
+  drawBossLaser(c) {
+    const b = this.boss;
+    if (!b || b.state !== 'laser') return;
+    const len = 760, w = 30 + Math.sin(this.clock * 40) * 4;
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    c.translate(b.x, b.y - 30);
+    c.rotate(b.laserA);
+    c.fillStyle = hexA(b.color, 0.3); c.fillRect(0, -w * 1.4, len, w * 2.8);
+    c.fillStyle = hexA(b.color, 0.85); c.fillRect(0, -w / 2, len, w);
+    c.fillStyle = '#ffffff'; c.fillRect(0, -w / 6, len, w / 3);
+    glowDot(c, 0, 0, 40, hexA(b.color, 0.5));
+    c.restore();
   }
 
   drawSprite(c, spr, x, y, scale, flip, t, opts = {}) {
@@ -1203,6 +1813,16 @@ class DungeonGame {
       c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 2;
       c.beginPath(); c.ellipse(mb.x, mb.y, 22, 8, 0, 0, 7); c.stroke();
     }
+    if (mb.legend || mb.awake) {
+      c.save(); c.globalCompositeOperation = 'lighter';
+      const col = mb.legend ? '#ffd84a' : mb.color;
+      glowDot(c, mb.x, mb.y - 22, 30 + Math.sin(this.clock * 5 + mb.i) * 4, hexA(col, 0.18));
+      c.strokeStyle = hexA(col, 0.7); c.lineWidth = 2;
+      c.setLineDash([6, 6]); c.lineDashOffset = -this.clock * 30;
+      c.beginPath(); c.ellipse(mb.x, mb.y, 26, 9, 0, 0, 7); c.stroke();
+      c.restore();
+      if (Math.random() < 0.12) this.part('star', mb.x + rand(-18, 18), mb.y - rand(5, 45), 0, -40, 0.6, 3, col);
+    }
     const hop = mb.hop > 0 ? Math.sin((0.45 - mb.hop) / 0.45 * Math.PI) * 40 : 0;
     this.drawSprite(c, mb.spr, mb.x, mb.y - bob - hop, 1, mb.flip, this.clock + mb.i, { alpha: blink ? 0.35 : 1, color: mb.color });
     if (mb.sprites.shiny && Math.random() < 0.05) this.parts.push({ kind: 'star', x: mb.x + rand(-18, 18), y: mb.y - rand(10, 50), vx: 0, vy: -20, life: 0.5, max: 0.5, size: 3, color: '#ffe680' });
@@ -1218,11 +1838,13 @@ class DungeonGame {
       c.save(); c.globalCompositeOperation = 'lighter';
       const auraR = 70 + Math.sin(this.clock * 5) * 6;
       const g = c.createRadialGradient(e.x, e.y - 50 + lift, 10, e.x, e.y - 50 + lift, auraR * (e.phase2 ? 1.5 : 1));
-      g.addColorStop(0, e.phase2 ? 'rgba(255,40,80,.45)' : hexA(e.color, 0.35));
+      g.addColorStop(0, e.phase2 ? 'rgba(255,40,80,.45)' : e.legend ? 'rgba(255,215,90,.45)' : hexA(e.color, 0.35));
       g.addColorStop(1, 'rgba(0,0,0,0)');
       c.fillStyle = g; c.beginPath(); c.arc(e.x, e.y - 50 + lift, auraR * 1.6, 0, 7); c.fill();
       c.restore();
-      this.drawSprite(c, e.spr, e.x, e.y + lift, e.scale, e.flip, t, { tint: e.flash > 0 ? 'white' : e.phase2 ? 'rage' : null, speed: e.phase2 ? 1.6 : 1 });
+      const alpha = e.state === 'vanish' ? Math.max(0, e.timer / 0.55) : 1;
+      if (e.legend && Math.random() < 0.3) this.part('star', e.x + rand(-70, 70), e.y - rand(20, 160), 0, -40, 0.7, 4, '#ffd84a');
+      this.drawSprite(c, e.spr, e.x, e.y + lift, e.scale, e.flip, t, { alpha, tint: e.flash > 0 ? 'white' : e.phase2 ? 'rage' : null, speed: e.phase2 ? 1.6 : 1 });
       if (e.shiny && Math.random() < 0.25) this.parts.push({ kind: 'star', x: e.x + rand(-60, 60), y: e.y - rand(20, 140), vx: 0, vy: -30, life: 0.6, max: 0.6, size: 4, color: '#ffe680' });
       return;
     }
@@ -1234,7 +1856,7 @@ class DungeonGame {
       c.fillStyle = `rgba(255,60,90,${0.18 + Math.sin(t * 6) * 0.08})`;
       c.beginPath(); c.arc(e.x, e.y - 30, 46, 0, 7); c.fill(); c.restore();
     }
-    const tint = e.flash > 0 ? 'white' : e.slow > 0 ? 'ice' : null;
+    const tint = e.flash > 0 || (e.fuse !== undefined && Math.floor(this.clock * 16) % 2) ? 'white' : e.slow > 0 ? 'ice' : null;
     this.drawSprite(c, e.spr, e.x, e.y - (e.sleep > 0 ? 0 : bob), e.scale * (dying ? Math.max(0.1, e.dying) : 1), e.flip, e.sleep > 0 ? 0 : t,
       { tint, alpha: dying ? Math.max(0, e.dying) : 1, color: typeColor(e.types[0]) });
     if (e.sleep > 0) {
@@ -1243,7 +1865,7 @@ class DungeonGame {
     }
     if (e.shiny && Math.random() < 0.08) this.parts.push({ kind: 'star', x: e.x + rand(-14, 14), y: e.y - rand(10, 40), vx: 0, vy: -20, life: 0.5, max: 0.5, size: 3, color: '#ffe680' });
     if (e.kind === 'elite' && !dying) {
-      const w = 50;
+      const w = e.mid ? 90 : 50;
       c.fillStyle = 'rgba(0,0,0,.6)'; c.fillRect(e.x - w / 2, e.y + 6, w, 5);
       c.fillStyle = '#ff4d6d'; c.fillRect(e.x - w / 2, e.y + 6, w * Math.max(0, e.hp / e.max), 5);
     }
@@ -1294,7 +1916,18 @@ class DungeonGame {
         c.beginPath(); c.ellipse(f.x, f.y, f.r * prog, f.r * 0.6 * prog, 0, 0, 7); c.fill();
         if (!f.landed) {
           const h = (1 - prog) * 380;
-          if (f.look === 'dig') {            // 구멍파기: 땅속에서 솟아오름
+          if (f.legend) {                    // 전설 유성: 빛나는 꼬리
+            c.globalCompositeOperation = 'lighter';
+            const x0 = f.x + h * 0.45, y0 = f.y - h;
+            const grad = c.createLinearGradient(x0 + 60, y0 - 130, x0, y0);
+            grad.addColorStop(0, 'rgba(0,0,0,0)'); grad.addColorStop(1, hexA(f.look === 'rainbow' ? `#${['ff5a5a', 'ffd84a', '6dff8a', '5ec8ff', 'c38cff'][Math.floor(f.x) % 5]}` : f.color, 0.9));
+            c.strokeStyle = grad; c.lineWidth = 10; c.lineCap = 'round';
+            c.beginPath(); c.moveTo(x0 + 60, y0 - 130); c.lineTo(x0, y0); c.stroke();
+            glowDot(c, x0, y0, 16, hexA(f.color, 0.5));
+            if (f.look === 'heart') { c.fillStyle = '#ff9fd6'; c.beginPath(); c.arc(x0 - 4, y0 - 2, 5, 0, 7); c.arc(x0 + 4, y0 - 2, 5, 0, 7); c.moveTo(x0 - 9, y0); c.lineTo(x0, y0 + 9); c.lineTo(x0 + 9, y0); c.fill(); }
+            else if (f.look === 'bolt') { c.strokeStyle = '#fff6a0'; c.lineWidth = 3; c.beginPath(); c.moveTo(x0, y0 - 12); c.lineTo(x0 - 5, y0); c.lineTo(x0 + 4, y0); c.lineTo(x0 - 2, y0 + 12); c.stroke(); }
+            else glowDot(c, x0, y0, 7, '#ffffff');
+          } else if (f.look === 'dig') {            // 구멍파기: 땅속에서 솟아오름
             c.fillStyle = '#7a5530';
             for (let i = 0; i < 5; i++) c.fillRect(f.x + rand(-f.r, f.r) * 0.6, f.y + rand(-6, 6), 5, 5);
           } else if (f.look === 'dive') {    // 공중날기: 위에서 내리꽂음
@@ -1334,6 +1967,12 @@ class DungeonGame {
         c.beginPath(); c.ellipse(t.x, t.y, t.r * k, t.r * 0.65 * k, 0, 0, 7); c.fill();
         c.strokeStyle = 'rgba(255,140,140,.95)'; c.lineWidth = 2;
         c.beginPath(); c.ellipse(t.x, t.y, t.r, t.r * 0.65, 0, 0, 7); c.stroke();
+        if (t.rock) {
+          const h = (1 - k) * 420;
+          c.fillStyle = hexA(t.color, 0.35); c.fillRect(t.x - 6, t.y - h - 60, 12, 60);
+          c.fillStyle = t.color; c.beginPath(); c.arc(t.x, t.y - h, 12, 0, 7); c.fill();
+          c.fillStyle = '#ffffff'; c.beginPath(); c.arc(t.x - 3, t.y - h - 3, 4, 0, 7); c.fill();
+        }
       } else if (t.kind === 'glow') {
         c.globalCompositeOperation = 'lighter';
         const r = 40 + k * 90;
@@ -1382,6 +2021,11 @@ class DungeonGame {
         const r = q.r + (q.R - q.r) * (1 - k);
         c.strokeStyle = hexA(q.color, k); c.lineWidth = (q.w || 3) * k + 1;
         c.beginPath(); c.ellipse(q.x, q.y, r, r * 0.7, 0, 0, 7); c.stroke();
+      } else if (q.kind === 'line') {
+        c.save(); c.translate(q.x, q.y); c.rotate(q.a);
+        c.fillStyle = hexA(q.color, 0.6 * k); c.fillRect(0, -q.w / 2, q.len, q.w);
+        c.fillStyle = `rgba(255,255,255,${k})`; c.fillRect(0, -q.w / 6, q.len, q.w / 3);
+        c.restore();
       } else if (q.kind === 'star') {
         c.fillStyle = hexA(q.color, k);
         const s = q.size * (0.5 + k);
@@ -1433,4 +2077,12 @@ function hexA(hex, a) {
   const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
   return `rgba(${r},${g},${b},${a})`;
 }
+const BOSS_SIG = {
+  '불꽃': ['laser', 'meteors'], '드래곤': ['laser', 'meteors'], '물': ['puddles', 'waves'], '독': ['puddles', 'waves'],
+  '전기': ['grid', 'laser'], '얼음': ['meteors', 'waves'], '바위': ['meteors', 'grid'], '땅': ['meteors', 'grid'],
+  '강철': ['laser', 'grid'], '에스퍼': ['teleport', 'pull'], '고스트': ['teleport', 'pull'], '악': ['teleport', 'waves'],
+  '페어리': ['pull', 'waves'], '풀': ['puddles', 'waves'], '벌레': ['waves', 'puddles'], '노말': ['waves', 'meteors'],
+  '격투': ['teleport', 'meteors'], '비행': ['waves', 'laser'],
+};
+const BOSS_SIG_ALL = new Set(['laser', 'meteors', 'puddles', 'grid', 'teleport', 'waves', 'pull']);
 const typeColorHit = t => ({ '불꽃': '#ffb238', '물': '#8fd3ff', '전기': '#fff27a', '풀': '#9dff8a', '얼음': '#dff8ff', '고스트': '#b38cff', '독': '#d08cff' }[t] || '#ffffff');

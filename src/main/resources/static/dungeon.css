@@ -128,7 +128,7 @@
 .potion kbd { position: absolute; left: 4px; top: 2px; font-size: 10px; color: #8b95a8; font-family: inherit; }
 .potion.empty { opacity: .35; border-color: #555; }
 
-.bossbar { position: absolute; left: 50%; top: 58px; transform: translateX(-50%); width: min(720px, 76vw); animation: drop .5s ease-out; }
+.bossbar { position: absolute; left: 50%; top: 80px; transform: translateX(-50%); width: min(720px, 76vw); animation: drop .5s ease-out; }
 @keyframes drop { from { transform: translate(-50%, -40px); opacity: 0; } }
 .bb-name { text-align: center; font-weight: 900; font-size: 17px; color: #fff; text-shadow: 0 2px 0 #000, 0 0 12px rgba(255,60,90,.6); margin-bottom: 4px; display: flex; gap: 6px; justify-content: center; align-items: center; }
 .bb-name .type-chip { font-size: 11px; padding: 1px 8px; border-radius: 999px; color: #fff; }
@@ -258,3 +258,31 @@
 
 .skill-chip { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 6px; color: #fff;
   background: color-mix(in srgb, var(--c) 35%, #1b1f2a); border: 1px solid var(--c); }
+
+/* ---------- 런 레벨 · 경험치 결정 ---------- */
+.xpbar { position: relative; height: 10px; margin-top: 30px; background: rgba(0,0,0,.6); border: 2px solid #2d5a7a; border-radius: 6px; }
+.xpbar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #3fb7ff, #9ff3ff); border-radius: 4px; transition: width .12s; box-shadow: 0 0 8px #5ec8ff; }
+.xpbar b { position: absolute; right: -4px; top: -7px; transform: translateX(100%); font-size: 13px; color: #9ff3ff; text-shadow: 0 2px 0 #000; }
+.items-hud { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.ih { position: relative; width: 30px; height: 30px; display: grid; place-items: center; background: rgba(15,18,26,.75); border: 1px solid #5a6688; border-radius: 7px; font-size: 16px; }
+.ih img { width: 26px; height: 26px; image-rendering: pixelated; }
+.ih em { position: absolute; right: -3px; bottom: -4px; font-style: normal; font-size: 10px; font-weight: 900; background: #ffd84a; color: #2a2000; border-radius: 6px; padding: 0 3px; }
+.ph b { color: #fff; font-size: 9px; }
+.ph.awake { border-color: var(--c); box-shadow: 0 0 10px var(--c); }
+.ph.legend { border-color: #ffd84a; box-shadow: 0 0 10px rgba(255,216,74,.6); }
+
+/* ---------- 레벨 업 카드 ---------- */
+.pick-card { position: relative; border-top: 4px solid var(--c, #ffd84a); }
+.pk-icon img { width: 64px; height: 64px; image-rendering: pixelated; object-fit: contain; }
+.pk-new { position: absolute; right: 10px; top: 10px; font-size: 11px; font-weight: 900; color: #2a2000; background: #ffd84a; border-radius: 6px; padding: 1px 6px; }
+.pick-card.awaken { background: linear-gradient(160deg, rgba(255,216,74,.18), rgba(20,22,34,.95) 60%); border-color: #ffd84a; animation: awakenGlow .8s infinite alternate; }
+.pick-card.awaken b { color: #ffe680; }
+@keyframes awakenGlow { from { box-shadow: 0 0 0 2px rgba(255,216,74,.3); } to { box-shadow: 0 0 26px 4px rgba(255,216,74,.55); } }
+
+/* ---------- 전설 ---------- */
+.warning.legend .warn-text { color: #ffd84a; text-shadow: 0 0 20px #ffb800, 0 3px 0 #6a4a00; }
+.warning.legend .warn-stripe { background: repeating-linear-gradient(-45deg, #ffd84a 0 22px, #2a2000 22px 44px); }
+.bossbar.legend .bb-track { border-color: #ffd84a; box-shadow: 0 0 16px rgba(255,216,74,.5); }
+.bossbar .lv { font-size: 12px; }
+.banner.legend { color: #ffe680; text-shadow: 0 0 18px #ffb800, 0 3px 0 #000; }
+.cap-ball-btn small { display: block; font-size: 10px; color: #9fe8a8; }
