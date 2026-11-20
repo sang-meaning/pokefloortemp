@@ -12,6 +12,7 @@ const ARENA = 2400;            // 경기장 한 변 (월드 단위 = 화면 px �
 const TILE = 32;
 const RUN_TIME = 180;          // 진행도 기준 시간 (몬스터 강해지는 속도·이벤트 시점)
 const ELITE_TIMES = [30, 65, 115, 145, 165];
+const ELITE_TIMES_NM = [20, 40, 60, 80, 100, 120, 135, 150, 165];   // 나이트메어: 강한 개체 거의 2배
 const SWARM_TIMES = [50, 110, 160];
 const SKILL_MAX = 8;
 const ITEM_MAX = 5;
@@ -71,6 +72,8 @@ class DungeonGame {
     this.diff = start.difficulty;
     this.tier = start.tier || { no: 2, hp: 1, dmg: 1, spawn: 1, label: 'NORMAL' };
     this.ultDark = 0;
+    this.nightmare = this.tier.no >= 5;   // 나이트메어 이상: 숫자 말고 규칙도 바뀜
+    this.abyss = this.tier.no >= 6;       // 숨겨진 어비스: 더 가혹한 규칙
     this.time = 0;                   // 생존 시간 (보스 전까지)
     this.killTarget = start.killTarget || 390;   // 이만큼 쓰러뜨리면 보스
     this.clock = 0;                  // 연출용 전체 시간
@@ -420,7 +423,7 @@ class DungeonGame {
         this.swarm();
       }
     });
-    ELITE_TIMES.forEach(et => {
+    (this.nightmare ? ELITE_TIMES_NM : ELITE_TIMES).forEach(et => {
       if (t >= et && !this.events.has(`el${et}`)) {
         this.events.add(`el${et}`);
         this.spawnEnemy(true);
@@ -528,13 +531,13 @@ class DungeonGame {
     let ai = 'chase';
     if (EXPLODERS.has(d.p.id)) ai = 'boom';
     else if (main === '비행') ai = 'zig';
-    else if ((main === '고스트' || main === '에스퍼') && (elite || Math.random() < 0.4)) ai = 'shoot';
+    else if ((main === '고스트' || main === '에스퍼') && (elite || Math.random() < (this.nightmare ? 0.75 : 0.4))) ai = 'shoot';
     else if (main === '바위' || main === '강철') ai = 'tank';
     else if (main === '전기') ai = 'dash';
     if (ai === 'tank') hp *= 1.6;
     const e = {
       kind: elite ? 'elite' : 'mob', d, types: d.types, main, ai, x, y, hp, max: hp,
-      spd: Math.min(95, 46 + st.speed * 0.25) * (elite ? 0.8 : 1) * rand(0.9, 1.1) * (ai === 'tank' ? 0.75 : ai === 'zig' ? 1.15 : 1),
+      spd: Math.min(95, 46 + st.speed * 0.25) * (elite ? 0.8 : 1) * rand(0.9, 1.1) * (ai === 'tank' ? 0.75 : ai === 'zig' ? 1.15 : 1) * (this.abyss ? 1.3 : this.nightmare ? 1.18 : 1),
       r: elite ? 30 : 16, scale: elite ? 1.25 : 0.8,
       dmg: (5 + t * 0.04) * this.diff * (elite ? 1.6 : 1),
       flash: 0, slow: 0, kx: 0, ky: 0, flip: 1, shiny, phase: Math.random() * 6,
@@ -882,7 +885,12 @@ class DungeonGame {
     const val = e.kind === 'elite' ? 3 : 1 + (this.stage() > 90 ? 1 : 0) * (Math.random() < 0.5 ? 1 : 0);
     for (let i = 0; i < coins; i++) this.coins.push({ x: e.x, y: e.y, vx: rand(-120, 120), vy: rand(-160, -40), v: val, t: 0 });
     if (e.shiny) { for (let i = 0; i < 4; i++) this.coins.push({ x: e.x, y: e.y, vx: rand(-150, 150), vy: rand(-180, -40), v: 3, t: 0 }); }
-    if (Math.random() < (e.kind === 'elite' ? 1 : 0.018)) this.orbs.push({ x: e.x, y: e.y, amt: e.kind === 'elite' ? 0.2 : 0.08, t: 0 });
+    if (Math.random() < (e.kind === 'elite' ? 1 : this.abyss ? 0 : this.nightmare ? 0.006 : 0.018)) this.orbs.push({ x: e.x, y: e.y, amt: e.kind === 'elite' ? (this.abyss ? 0.08 : 0.2) : 0.08, t: 0 });
+    // 어비스: 쓰러진 적 일부가 원한의 탄을 흩뿌림
+    if (this.abyss && this.phase === 'play' && Math.random() < 0.15) {
+      const off = Math.random();
+      for (let k = 0; k < 6; k++) this.ebullet(e.x, e.y - 10, off + k * Math.PI / 3, 120, '#ff2a4a', 4 * this.diff * (1 + this.stage() / 120), 6);
+    }
     // 경험치 결정
     const gv = e.mid ? 40 : e.kind === 'elite' ? 12 : 1 + (this.stage() > 60 ? 1 : 0) + (this.stage() > 125 ? 1 : 0);
     this.dropGem(e.x + rand(-6, 6), e.y + rand(-6, 6), gv);
@@ -945,7 +953,7 @@ class DungeonGame {
             for (let k = 0; k < 14; k++) this.ebullet(e.x, e.y - 30, off + k * Math.PI * 2 / 14, 170, col, dm * 1.4, 8);
             SFX.play('explode', 200);
           } else {
-            e.fireT = rand(2.8, 3.8);
+            e.fireT = rand(2.8, 3.8) * (this.abyss ? 0.65 : 1);
             this.ebullet(e.x, e.y - 14, a, 170, col, dm, 6);
           }
         }
@@ -1014,7 +1022,7 @@ class DungeonGame {
     this.beatT = (this.beatT || 0) - dt;
     if (this.beatT <= 0) { SFX.play('beat'); this.beatT = b.phase2 ? 0.42 : 0.62; }
 
-    if (!b.phase2 && b.hp < b.max * 0.5) {
+    if (!b.phase2 && b.hp < b.max * (this.abyss ? 0.7 : 0.5)) {
       b.phase2 = true;
       b.state = 'rage';
       b.timer = 1.1;
@@ -1159,9 +1167,11 @@ class DungeonGame {
   bossChoose() {
     const b = this.boss, p = this.player;
     // 전설 보스: 세 번에 한 번(분노하면 두 번에 한 번) 궁극기
-    if (b.legend) {
+    // 나이트메어에서는 일반 보스도 궁극기를 씀
+    if (b.legend || this.nightmare) {
       b.ultN = (b.ultN || 0) + 1;
-      if (b.ultN % (b.phase2 ? 2 : 3) === 0) { this.bossUltTele(); return; }
+      const every = this.abyss ? 2 : b.legend ? (b.phase2 ? 2 : 3) : (b.phase2 ? 3 : 4);
+      if (b.ultN % every === 0) { this.bossUltTele(); return; }
     }
     const opts = ['charge', 'burst', 'slam', 'summon'];
     const sig = BOSS_SIG[b.type] || ['waves', 'meteors'];
@@ -1210,7 +1220,7 @@ class DungeonGame {
     b.attack = `ult:${u}`;
     b.state = 'tele';
     b.timer = 1.4;
-    const name = (typeof LEGEND_MOVE !== 'undefined' && LEGEND_MOVE[b.p.id]) || '전설의 힘';
+    const name = (b.legend && typeof LEGEND_MOVE !== 'undefined' && LEGEND_MOVE[b.p.id]) || (b.legend ? '전설의 힘' : '악몽의 힘');
     this.hooks.onBanner(`★ ${b.p.nameKo}의 ${name}! ★`, 'legend');
     this.ultDark = 1;
     this.shake = Math.max(this.shake, 8);

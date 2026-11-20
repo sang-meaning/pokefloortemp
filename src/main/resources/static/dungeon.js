@@ -27,13 +27,12 @@ async function loadLobby() {
   const [today, collection, shop] = await Promise.all([api('/api/dungeon/today'), api('/api/collection'), api('/api/shop')]);
   Object.assign(state, { today, collection, shop });
   refreshGold(shop.gold);
-  $('today-sub').textContent = `${today.date} · 오늘의 바이옴 3곳 중 하나를 골라 출격해요 (개발 중이라 횟수 제한 없음)`;
+  $('today-sub').textContent = '바이옴을 골라 출격해요 · 난이도 진행은 바이옴마다 따로예요';
 
   $('starter').classList.toggle('hidden', collection.length > 0);
   if (!collection.length) renderStarter();
   if (!state.biome) state.biome = today.options[0].id;
-  const open = today.tiers.filter(t => t.unlocked);
-  if (!state.tier || !open.some(t => t.id === state.tier)) state.tier = open[open.length - 1].id;
+  pickTierFor(state.biome, true);
   renderTiers();
   if (!state.party.length && collection.length) {
     state.party = [...collection].sort((a, b) => b.level - a.level || b.exp - a.exp).slice(0, 3).map(o => o.pokemon.id);
@@ -64,14 +63,38 @@ $('starter-list').addEventListener('click', async e => {
   loadLobby();
 });
 
-const TIER_ICON = { EASY: '🌱', NORMAL: '⚔', HARD: '🔥', EXTREME: '💀', NIGHTMARE: '👁' };
+const TIER_ICON = { EASY: '🌱', NORMAL: '⚔', HARD: '🔥', EXTREME: '💀', NIGHTMARE: '👁', ABYSS: '🕳' };
+const TIER_RULES = {
+  NIGHTMARE: '적이 빠르고 원거리·강한 개체가 많음<br>회복 구슬 드묾 · 보스도 궁극기 사용',
+  ABYSS: '나이트메어 규칙 + 회복 구슬 없음<br>쓰러진 적이 탄을 뿌림 · 보스 70%부터 분노',
+};
+/** 이 바이옴의 단계별 해금·클리어 */
+function tiersFor(biome) {
+  const c = state.today.progress[biome] || 0;
+  return state.today.tiers.map(t => ({ ...t, unlocked: t.no <= c + 1, cleared: t.no <= c }));
+}
+/** 바이옴을 바꾸면 그 바이옴에서 열린 가장 높은 단계로 */
+function pickTierFor(biome, keep) {
+  const open = tiersFor(biome).filter(t => t.unlocked);
+  if (!keep || !open.some(t => t.id === state.tier)) state.tier = open[open.length - 1].id;
+}
 function renderTiers() {
-  $('tier-pick').innerHTML = state.today.tiers.map(t => `
+  const list = tiersFor(state.biome);
+  const b = state.today.options.find(x => x.id === state.biome);
+  $('tier-note').textContent = `${b ? `${b.emoji} ${b.name}` : ''} 진행도 · 바이옴마다 따로, 앞 단계를 클리어하면 다음 단계가 열려요`;
+  $('tier-pick').innerHTML = list.map(t => t.id === 'ABYSS' && !t.unlocked ? `
+    <button class="tier t-secret locked" disabled>
+      <span class="ti-icon">❔</span>
+      <b>? ? ?</b>
+      <small>숨겨진 단계</small>
+      <em>NIGHTMARE 를 클리어하면<br>무언가 깨어나요…</em>
+    </button>` : `
     <button class="tier t-${t.id.toLowerCase()}${state.tier === t.id ? ' on' : ''}${t.unlocked ? '' : ' locked'}" data-id="${t.id}" ${t.unlocked ? '' : 'disabled'}>
       <span class="ti-icon">${t.unlocked ? TIER_ICON[t.id] : '🔒'}</span>
       <b>${t.label}</b>
       <small>${t.nameKo}${t.cleared ? ' · ✔ 클리어' : ''}</small>
-      <em>${t.unlocked ? `적 체력 ×${t.hp} · 공격 ×${t.dmg}<br>보상 💰×${t.gold} · 경험치 ×${t.exp}<br>전설 보스 등장 ${+(t.legend * 100).toFixed(1)}%` : `${state.today.tiers[t.no - 2]?.label} 클리어하면 열려요`}</em>
+      ${TIER_RULES[t.id] && t.unlocked ? `<i class="ti-rules">${TIER_RULES[t.id]}</i>` : ''}
+      <em>${t.unlocked ? `적 체력 ×${t.hp} · 공격 ×${t.dmg}<br>보상 💰×${t.gold} · 경험치 ×${t.exp}<br>전설 보스 등장 ${+(t.legend * 100).toFixed(1)}%` : `${list[t.no - 2]?.label} 클리어하면 열려요`}</em>
     </button>`).join('');
 }
 $('tier-pick').addEventListener('click', e => {
@@ -105,21 +128,68 @@ function renderBiomes() {
       <canvas data-biome="${b.id}"></canvas>
       <div class="bo-body">
         <b>${b.emoji} ${escapeHtml(b.name)}</b>
+        <span class="bo-prog">${state.today.progress[b.id] ? `🏆 ${state.today.tiers[state.today.progress[b.id] - 1].label} 클리어` : '도전 전'}</span>
         <small>${escapeHtml(b.description)}</small>
         <div class="bo-row">👑 보스 ${typeChips(b.bossTypes)}</div>
         <div class="bo-row">👾 몬스터 ${typeChips(b.mobTypes)}</div>
       </div>
     </button>`).join('');
   el.querySelectorAll('canvas').forEach(cv => biomePreview(cv, cv.dataset.biome));
+  if (!renderBiomes.done) {   // 처음엔 고른 바이옴이 보이게
+    renderBiomes.done = true;
+    el.querySelector('.biome-opt.on')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }
+  setTimeout(updateArrows, 0);
 }
 $('biome-pick').addEventListener('click', e => {
   const b = e.target.closest('.biome-opt');
-  if (!b) return;
+  if (!b || carousel.dragged) return;
   state.biome = b.dataset.id;
   SFX.play('open');
+  pickTierFor(state.biome, false);
   renderBiomes();
+  renderTiers();
   renderParty();
+  b.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
 });
+
+/* ---------- 바이옴 카드: 좌우로 끌기 / 화살표 ---------- */
+const carousel = { el: $('biome-pick'), down: false, dragged: false, x0: 0, s0: 0 };
+function slideBiomes(dir) {
+  const card = carousel.el.querySelector('.biome-opt');
+  const step = card ? card.offsetWidth + 12 : 300;
+  carousel.el.scrollBy({ left: dir * step, behavior: 'smooth' });
+}
+$('bc-left').addEventListener('click', () => slideBiomes(-1));
+$('bc-right').addEventListener('click', () => slideBiomes(1));
+carousel.el.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  Object.assign(carousel, { down: true, dragged: false, x0: e.clientX, s0: carousel.el.scrollLeft });
+});
+window.addEventListener('pointermove', e => {
+  if (!carousel.down) return;
+  const dx = e.clientX - carousel.x0;
+  if (!carousel.dragged && Math.abs(dx) > 6) { carousel.dragged = true; carousel.el.classList.add('dragging'); }
+  if (carousel.dragged) carousel.el.scrollLeft = carousel.s0 - dx;
+});
+window.addEventListener('pointerup', () => {
+  if (!carousel.down) return;
+  carousel.down = false;
+  if (carousel.dragged) {
+    carousel.el.classList.remove('dragging');
+    // 가장 가까운 카드에 부드럽게 맞춤
+    const card = carousel.el.querySelector('.biome-opt'), step = card ? card.offsetWidth + 12 : 300;
+    carousel.el.scrollTo({ left: Math.round(carousel.el.scrollLeft / step) * step, behavior: 'smooth' });
+    setTimeout(() => { carousel.dragged = false; }, 0);
+  }
+});
+const updateArrows = () => {
+  const el = carousel.el;
+  $('bc-left').classList.toggle('off', el.scrollLeft < 4);
+  $('bc-right').classList.toggle('off', el.scrollLeft + el.clientWidth > el.scrollWidth - 4);
+};
+carousel.el.addEventListener('scroll', updateArrows);
+window.addEventListener('resize', updateArrows);
 
 /** 지금 고른 바이옴의 보스·몬스터 타입에 대한 상성 요약 */
 /** 기술 이름표 (기술 타입 색) */
@@ -618,7 +688,8 @@ function showResult() {
   const f = state.finish, g = state.game;
   $('result').classList.remove('hidden');
   $('res-title').innerHTML = (f.won ? `🏆 ${state.run.tier.label} 클리어!` : '💫 눈앞이 캄캄해졌다…')
-    + (f.tierUnlocked ? `<div class="res-unlock">🔓 ${f.tierUnlocked} 단계가 열렸어요!</div>` : '');
+    + (f.tierUnlocked === 'ABYSS' ? '<div class="res-unlock nm">🕳 숨겨진 단계 ABYSS 가 깨어났다…</div>'
+      : f.tierUnlocked ? `<div class="res-unlock">🔓 ${f.tierUnlocked} 단계가 열렸어요!</div>` : '');
   $('res-gold').innerHTML = `<span>💰 +<b id="gold-count">0</b></span><small>${f.won ? '' : '쓰러져서 골드 절반 · '}처치 ${g.kills} · 던전 Lv.${g.lv} · 보유 ${f.walletGold.toLocaleString()}</small>`;
   // 골드 숫자 올라가기
   const target = f.gold;

@@ -38,20 +38,6 @@ public class WalletService {
         return w.getGold();
     }
 
-    @Transactional
-    public int clearedTier() {
-        return wallet().getClearedTier();
-    }
-
-    /** 단계 클리어 기록. 새로 올라갔으면 true */
-    @Transactional
-    public boolean clearTier(int no) {
-        Wallet w = wallet();
-        int before = w.getClearedTier();
-        w.clearTier(no);
-        return w.getClearedTier() > before;
-    }
-
     private Wallet wallet() {
         return repository.findById(Wallet.ID).orElseGet(() -> repository.save(new Wallet(STARTING_GOLD)));
     }

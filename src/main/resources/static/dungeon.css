@@ -12,7 +12,22 @@
 .lobby .rules b { color: #ffd84a; }
 .step { font-size: 16px; margin: 26px 0 10px; color: #dfe5f0; }
 
-.biome-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.biome-car { position: relative; }
+.biome-pick { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding: 6px 2px 10px; cursor: grab; user-select: none; }
+.biome-pick::-webkit-scrollbar { display: none; }
+.biome-pick.dragging { scroll-snap-type: none; cursor: grabbing; }
+.biome-pick .biome-opt { flex: 0 0 calc((100% - 24px) / 3); scroll-snap-align: start; }
+.biome-pick canvas { pointer-events: none; }
+.bc-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 40px; height: 40px; border-radius: 50%;
+  border: 2px solid #4b5878; background: rgba(20,24,36,.92); color: #fff; font-size: 26px; line-height: 1; cursor: pointer; transition: opacity .2s, background .15s; }
+.bc-arrow:hover { background: #2f3a55; }
+.bc-arrow.left { left: -18px; } .bc-arrow.right { right: -18px; }
+.bc-arrow.off { opacity: 0; pointer-events: none; }
+.bo-prog { display: inline-block; font-size: 11px; color: #ffd84a; margin-left: 6px; }
+.tier-pick { grid-template-columns: repeat(6, 1fr) !important; }
+.t-abyss { --c: #ff2a4a; }
+.t-abyss:not(.locked) { background: radial-gradient(circle at 50% 0%, rgba(255,30,60,.22), #120a10 75%); }
+@media (max-width: 760px) { .biome-pick .biome-opt { flex-basis: 80%; } }
 .biome-opt {
   display: flex; flex-direction: column; text-align: left; padding: 0; overflow: hidden; cursor: pointer;
   background: #252b39; border: 2px solid #323a4d; border-radius: 14px; color: inherit; font: inherit;
@@ -331,3 +346,10 @@
 .boss-go kbd { font-size: 12px; background: rgba(0,0,0,.35); border-radius: 5px; padding: 1px 6px; margin-left: 6px; }
 .boss-go:hover { filter: brightness(1.12); }
 @keyframes bossGo { from { transform: translateX(-50%) scale(1); } to { transform: translateX(-50%) scale(1.06); } }
+
+.tier.t-secret b { color: #6a6f80; letter-spacing: 4px; }
+.t-nightmare:not(.locked) { background: radial-gradient(circle at 50% 0%, rgba(195,140,255,.25), #1c2130 70%); }
+.t-nightmare:not(.locked) .ti-icon { animation: nmEye 2.4s ease-in-out infinite; }
+@keyframes nmEye { 0%, 90%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+.ti-rules { font-style: normal; font-size: 10px; color: #c9a6ff; text-align: center; line-height: 1.4; }
+.res-unlock.nm { color: #d6b8ff; text-shadow: 0 0 14px #9a5cff; font-size: 18px; }

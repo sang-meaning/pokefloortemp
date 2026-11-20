@@ -13,7 +13,8 @@ public final class RunDtos {
                               List<String> bossTypes, List<String> mobTypes) {}
 
     /** 오늘의 던전: 날짜로 정해지는 바이옴 3개 */
-    public record Today(String date, List<BiomeOption> options, long gold, int clearedTier, List<TierInfo> tiers) {}
+    /** progress: 바이옴 → 클리어한 가장 높은 단계 번호. tiers 의 unlocked/cleared 는 바이옴마다 브라우저에서 계산 */
+    public record Today(String date, List<BiomeOption> options, long gold, Map<String, Integer> progress, List<TierInfo> tiers) {}
 
     /** 난이도 단계: unlocked 고를 수 있음, cleared 클리어함 */
     public record TierInfo(String id, String label, String nameKo, int no, double hp, double dmg, double spawn,

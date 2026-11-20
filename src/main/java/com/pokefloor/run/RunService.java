@@ -46,15 +46,17 @@ public class RunService {
     private final ItemService items;
     private final ItemRepository itemRepository;
     private final WalletService wallet;
+    private final BiomeProgressRepository progress;
     private final Map<String, Session> sessions = new ConcurrentHashMap<>();
 
     public RunService(PokemonService pokemonService, CollectionService collection, ItemService items,
-                      ItemRepository itemRepository, WalletService wallet) {
+                      ItemRepository itemRepository, WalletService wallet, BiomeProgressRepository progress) {
         this.pokemonService = pokemonService;
         this.collection = collection;
         this.items = items;
         this.itemRepository = itemRepository;
         this.wallet = wallet;
+        this.progress = progress;
     }
 
     private static final class Session {
@@ -79,12 +81,15 @@ public class RunService {
     /* ---------- 오늘의 던전 ---------- */
 
     public Today today() {
-        LocalDate date = LocalDate.now();
-        List<Biome> all = new ArrayList<>(List.of(Biome.values()));
-        Collections.shuffle(all, new Random(date.toEpochDay() * 7919L));
-        int cleared = wallet.clearedTier();
-        return new Today(date.toString(), all.subList(0, 3).stream().map(RunService::option).toList(), wallet.gold(),
-                cleared, Arrays.stream(Tier.values()).map(t -> t.info(cleared)).toList());
+        // 바이옴은 모두 고를 수 있고, 난이도 진행은 바이옴마다 따로
+        Map<String, Integer> prog = new LinkedHashMap<>();
+        for (Biome b : Biome.values()) prog.put(b.name(), cleared(b));
+        return new Today(LocalDate.now().toString(), Arrays.stream(Biome.values()).map(RunService::option).toList(), wallet.gold(),
+                prog, Arrays.stream(Tier.values()).map(t -> t.info(0)).toList());
+    }
+
+    private int cleared(Biome b) {
+        return progress.findById(b.name()).map(BiomeProgress::getCleared).orElse(0);
     }
 
     static BiomeOption option(Biome b) {
@@ -108,7 +113,7 @@ public class RunService {
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "없는 난이도예요");
         }
-        if (tier.no() > wallet.clearedTier() + 1) {
+        if (tier.no() > cleared(biome) + 1) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "앞 단계를 먼저 클리어해야 열려요");
         }
         List<Integer> party = req.party() == null ? List.of() : req.party().stream().distinct().toList();
@@ -163,7 +168,7 @@ public class RunService {
                 * (Legendary.is(boss.getId()) ? 1.15 : 1);
         return new Start(s.id, option(biome), members, PokemonDto.from(boss), s.bossShiny,
                 collection.canAcquire(boss.getId(), s.bossShiny), s.bossLevel, mobs, brought, difficulty, wallet.gold(),
-                tier.info(wallet.clearedTier()), s.killTarget);
+                tier.info(cleared(biome)), s.killTarget);
     }
 
     /**
@@ -272,8 +277,11 @@ public class RunService {
                 : "이미 가진 포켓몬이라 놓아줬어요";
         if (won && !capturable) walletGold = wallet.add(100);   // 이미 가진 보스 → 보답 골드
         String unlocked = null;
-        if (won && wallet.clearTier(s.tier.no()) && s.tier.ordinal() + 1 < Tier.values().length) {
-            unlocked = Tier.values()[s.tier.ordinal() + 1].label;
+        if (won) {   // 이 바이옴의 진행도 기록 → 다음 단계 해금
+            BiomeProgress bp = progress.findById(s.biome.name()).orElseGet(() -> new BiomeProgress(s.biome.name()));
+            boolean up = bp.clear(s.tier.no());
+            progress.save(bp);
+            if (up && s.tier.ordinal() + 1 < Tier.values().length) unlocked = Tier.values()[s.tier.ordinal() + 1].label;
         }
         return new Finish(won, gold, walletGold, gains, capturable, note, balls(s), unlocked);
     }

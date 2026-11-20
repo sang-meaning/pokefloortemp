@@ -26,11 +26,15 @@
       <div class="starter-list" id="starter-list"></div>
     </section>
 
-    <h2 class="step">1. 난이도 <small>앞 단계를 클리어하면 다음 단계가 열려요</small></h2>
-    <div class="tier-pick" id="tier-pick"></div>
+    <h2 class="step">1. 바이옴 고르기 <small>좌우로 끌거나 화살표로 넘겨요</small></h2>
+    <div class="biome-car">
+      <button class="bc-arrow left" id="bc-left" aria-label="이전">‹</button>
+      <div class="biome-pick" id="biome-pick"></div>
+      <button class="bc-arrow right" id="bc-right" aria-label="다음">›</button>
+    </div>
 
-    <h2 class="step">2. 바이옴 고르기</h2>
-    <div class="biome-pick" id="biome-pick"></div>
+    <h2 class="step">2. 난이도 <small id="tier-note">바이옴마다 따로 · 앞 단계를 클리어하면 다음 단계가 열려요</small></h2>
+    <div class="tier-pick" id="tier-pick"></div>
 
     <h2 class="step">3. 파티 (최대 3마리 · 첫 번째가 리더)</h2>
     <div class="party-slots" id="party-slots"></div>
