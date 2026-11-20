@@ -70,6 +70,8 @@ class DungeonGame {
     this.hooks = hooks;              // onPick(cards, title), onBanner(text), onWarning(boss), onEnd(result), onHud(state)
     this.biome = start.biome.id;
     this.diff = start.difficulty;
+    this.tier = start.tier || { no: 2, hp: 1, dmg: 1, spawn: 1, label: 'NORMAL' };
+    this.ultDark = 0;
     this.time = 0;                   // 생존 시간 (보스 전까지)
     this.clock = 0;                  // 연출용 전체 시간
     this.phase = 'loading';
@@ -375,6 +377,7 @@ class DungeonGame {
     this.slowmo += (1 - this.slowmo) * Math.min(1, raw * 1.2);
     const dt = raw * this.slowmo;
     this.shake = Math.max(0, this.shake - raw * 30);
+    this.ultDark = Math.max(0, this.ultDark - raw * 0.8);
     this.flash = Math.max(0, this.flash - raw * 2.5);
 
     this.refreshTargets();
@@ -451,7 +454,8 @@ class DungeonGame {
     const n = this.members.length;
     const legend = !!b.legendary;
     // 런 안에서 레벨 업으로 강해지는 만큼 보스도 튼튼하게
-    const hp = (520 + st.bst * 2.3) * this.diff * (1 + 0.45 * (n - 1)) * (1.5 + this.lv * 0.035) * (legend ? 1.2 : 1);
+    const hp = (520 + st.bst * 2.3) * this.diff * (1 + 0.45 * (n - 1)) * (1.5 + this.lv * 0.035) * (legend ? 1.35 : 1) * this.tier.hp;
+    if (legend) this.legendDmg = 1.2;
     const main = mainType(b);
     const cx = clamp(this.player.x, 700, ARENA - 700), cy = clamp(this.player.y - 220, 700, ARENA - 700);
     this.arenaRing = { x: cx, y: cy + 120, r: 560, a: 0 };
@@ -471,7 +475,7 @@ class DungeonGame {
   spawn(dt) {
     const t = this.time;
     // 파티가 적으면 조금 덜 몰려옴
-    const rate = (0.8 + t * 0.022) * (0.7 + 0.15 * this.members.length);
+    const rate = (0.8 + t * 0.022) * (0.7 + 0.15 * this.members.length) * this.tier.spawn;
     this.spawnAcc += rate * dt;
     while (this.spawnAcc >= 1) {
       this.spawnAcc--;
@@ -490,7 +494,7 @@ class DungeonGame {
       x = clamp(this.player.x + Math.cos(a) * r, 60, ARENA - 60);
       y = clamp(this.player.y + Math.sin(a) * r, 60, ARENA - 60);
     }
-    let hp = (8 + st.bst * 0.02) * (1 + t / 60 * 0.7) * this.diff * (0.75 + 0.125 * this.members.length) * (elite ? 10 : 1);
+    let hp = (8 + st.bst * 0.02) * (1 + t / 60 * 0.7) * this.diff * (0.75 + 0.125 * this.members.length) * (elite ? 10 : 1) * this.tier.hp;
     const shiny = Math.random() < 0.04;
     // 대표 타입에 따라 움직임이 다름
     const main = d.main;
@@ -583,7 +587,7 @@ class DungeonGame {
       return;
     }
     if (this.mods.thorns && from && (from.kind === 'mob' || from.kind === 'elite')) this.damage(from, this.mods.thorns * (1 + this.time / 60), '노말', p, 80, true);
-    const reduced = amount * this.mods.armor * (100 / (100 + p.def * 0.5));
+    const reduced = amount * this.tier.dmg * (this.legendDmg || 1) * this.mods.armor * (100 / (100 + p.def * 0.5));
     p.hp -= reduced;
     p.inv = 0.5;
     this.shake = Math.max(this.shake, 7);
@@ -1019,6 +1023,45 @@ class DungeonGame {
         if (b.timer <= 0) { b.state = 'idle'; b.timer = 0.9 / rate; }
         break;
       }
+      case 'cross': {
+        b.timer -= dt;
+        this.ultDark = 1;
+        b.crossA += b.spinDir * 0.55 * dt;
+        const bx = b.x, by = b.y - 30;
+        for (let i = 0; i < b.crossN; i++) {
+          const a = b.crossA + i * Math.PI * 2 / b.crossN, dx = p.x - bx, dy = p.y - by;
+          const along = dx * Math.cos(a) + dy * Math.sin(a), side = -dx * Math.sin(a) + dy * Math.cos(a);
+          if (along > 0 && along < 620 && Math.abs(side) < 26) this.hurt(13 * this.diff, null);
+          if (Math.random() < 0.5) { const r = rand(40, 620); this.part('star', bx + Math.cos(a) * r, by + Math.sin(a) * r, rand(-60, 60), rand(-60, 60), 0.4, 4, pickOne(['#ffd84a', b.color, '#ffffff'])); }
+        }
+        if (b.timer <= 0) { b.state = 'idle'; b.timer = 1.0; }
+        break;
+      }
+      case 'flower': {
+        b.timer -= dt;
+        this.ultDark = 1;
+        b.spinT = (b.spinT || 0) - dt;
+        if (b.spinT <= 0) {
+          b.spinT = 0.11;
+          b.spinA = (b.spinA || 0) + 0.19;
+          const cols = ['#ff5a7a', '#ffd84a', '#6dff9a', '#5ec8ff', '#c38cff'];
+          for (let k = 0; k < 5; k++) this.ebullet(b.x, b.y - 30, b.spinA + k * Math.PI * 2 / 5, 150, cols[k], 9 * this.diff, 8);
+        }
+        b.ringT -= dt;
+        if (b.ringT <= 0) {
+          b.ringT = 0.95;
+          const gap = Math.atan2(p.y - b.y, p.x - b.x) + rand(-1, 1);
+          for (let i = 0; i < 32; i++) {
+            const a = i * Math.PI * 2 / 32;
+            let da = a - gap;
+            while (da > Math.PI) da -= Math.PI * 2;
+            while (da < -Math.PI) da += Math.PI * 2;
+            if (Math.abs(da) > 0.45) this.ebullet(b.x, b.y - 30, a, 120, '#ffffff', 9 * this.diff, 7);
+          }
+        }
+        if (b.timer <= 0) { b.state = 'idle'; b.timer = 1.0; }
+        break;
+      }
       case 'vanish':
         b.timer -= dt;
         if (b.timer <= 0) {
@@ -1060,6 +1103,11 @@ class DungeonGame {
 
   bossChoose() {
     const b = this.boss, p = this.player;
+    // 전설 보스: 세 번에 한 번(분노하면 두 번에 한 번) 궁극기
+    if (b.legend) {
+      b.ultN = (b.ultN || 0) + 1;
+      if (b.ultN % (b.phase2 ? 2 : 3) === 0) { this.bossUltTele(); return; }
+    }
     const opts = ['charge', 'burst', 'slam', 'summon'];
     const sig = BOSS_SIG[b.type] || ['waves', 'meteors'];
     opts.push(...sig, ...sig);                // 타입 고유 패턴은 더 자주
@@ -1098,6 +1146,52 @@ class DungeonGame {
       b.timer = 0.4;
       this.teles.push({ kind: 'glow', follow: b, life: 0.4, max: 0.4, color: '#ff3355' });
     } else this.bossSigTele(pick);
+  }
+
+  /* ---------- 전설 보스 궁극기: 화면이 어두워지고 금빛 예고 → 피할 틈이 있는 화려한 패턴 ---------- */
+  bossUltTele() {
+    const b = this.boss, p = this.player;
+    const u = pickOne(b.phase2 ? ['cross', 'starrain', 'flower', 'cross'] : ['cross', 'starrain', 'flower']);
+    b.attack = `ult:${u}`;
+    b.state = 'tele';
+    b.timer = 1.4;
+    const name = (typeof LEGEND_MOVE !== 'undefined' && LEGEND_MOVE[b.p.id]) || '전설의 힘';
+    this.hooks.onBanner(`★ ${b.p.nameKo}의 ${name}! ★`, 'legend');
+    this.ultDark = 1;
+    this.shake = Math.max(this.shake, 8);
+    SFX.play('roar');
+    this.teles.push({ kind: 'glow', follow: b, life: 1.4, max: 1.4, color: '#ffd84a' });
+    for (let i = 0; i < 40; i++) {
+      const a = Math.random() * Math.PI * 2, r = rand(150, 320);
+      this.part('star', b.x + Math.cos(a) * r, b.y - 40 + Math.sin(a) * r, -Math.cos(a) * r * 1.4, -Math.sin(a) * r * 1.4, 0.7, 4, pickOne(['#ffd84a', b.color, '#ffffff']));
+    }
+    if (u === 'cross') {
+      b.crossN = b.phase2 ? 6 : 4;
+      b.crossA = Math.random() * Math.PI;
+      b.spinDir = Math.random() < 0.5 ? 1 : -1;
+      for (let i = 0; i < b.crossN; i++) {
+        this.teles.push({ kind: 'line', x: b.x, y: b.y - 30, a: b.crossA + i * Math.PI * 2 / b.crossN, len: 620, w: 40, life: 1.4, max: 1.4, follow: b });
+      }
+    } else if (u === 'starrain') {
+      const n = 16 + this.tier.no * 2;
+      for (let i = 0; i < n; i++) {
+        setTimeout(() => {
+          if (this.phase !== 'boss' || !this.boss || this.boss.hp <= 0) return;
+          const q = this.player, aim = i % 4 === 0;
+          this.teles.push({ kind: 'circle', x: q.x + (aim ? q.vx * 0.4 : rand(-320, 320)), y: q.y + (aim ? q.vy * 0.4 : rand(-240, 240)),
+            r: 64, life: 1.15, max: 1.15, color: i % 2 ? '#ffd84a' : b.color, dmg: 15 * this.diff, boom: true, rock: true, star: true });
+        }, 500 + i * 110);
+      }
+    }
+  }
+
+  bossUltAct(u) {
+    const b = this.boss;
+    SFX.play('explode');
+    this.flash = Math.max(this.flash, 0.35);
+    if (u === 'cross') { b.state = 'cross'; b.timer = 4.2; SFX.play('zap'); }
+    else if (u === 'flower') { b.state = 'flower'; b.timer = 3.6; b.ringT = 0; }
+    else { b.state = 'idle'; b.timer = 2.6; }
   }
 
   /* ---------- 보스 타입 고유 패턴: 예고 ---------- */
@@ -1253,7 +1347,8 @@ class DungeonGame {
         b.state = 'spiral'; b.timer = 2.0;
         break;
       default:
-        if (BOSS_SIG_ALL.has(b.attack)) this.bossSigAct(b.attack);
+        if (String(b.attack).startsWith('ult:')) this.bossUltAct(b.attack.slice(4));
+        else if (BOSS_SIG_ALL.has(b.attack)) this.bossSigAct(b.attack);
         else { b.state = 'idle'; b.timer = 1; }
     }
   }
@@ -1328,7 +1423,7 @@ class DungeonGame {
       s.x += s.vx * dt;
       s.y += s.vy * dt;
       if (s.wobble) { s.vx *= Math.pow(0.5, dt); s.vy *= Math.pow(0.5, dt); s.y += Math.sin((this.clock - s.t0) * 9) * 0.6; }
-      if (s.kind === 'fire' && Math.random() < 0.35) this.parts.push({ kind: 'puff', x: s.x, y: s.y, vx: rand(-20, 20), vy: rand(-40, -10), life: 0.35, max: 0.35, size: rand(3, 6), color: pickOne(['#ffb238', '#ff6a1a', '#ffe680']) });
+      if (s.kind === 'fire' && Math.random() < (s.big ? 0.9 : 0.5) && this.parts.length < 700) this.parts.push({ kind: 'flame', x: s.x + rand(-4, 4), y: s.y + rand(-4, 4), vx: rand(-20, 20) - s.vx * 0.08, vy: rand(-70, -30), life: 0.4, max: 0.4, size: rand(4, s.big ? 10 : 7), color: pickOne(['#ffb238', '#ff6a1a', '#ff3d1a']) });
       if (s.kind === 'shadow' && Math.random() < 0.3) this.parts.push({ kind: 'puff', x: s.x + rand(-8, 8), y: s.y + rand(-8, 8), vx: 0, vy: -20, life: 0.4, max: 0.4, size: rand(3, 6), color: '#7a4fb8' });
       if (s.kind === 'gust') s.spin = (s.spin || 0) + dt * 14;
       for (const e of this.targetsList) {
@@ -1340,6 +1435,7 @@ class DungeonGame {
         s.hit.set(e, this.clock);
         if (s.explode) {
           this.explode(s.x, s.y, s.explode, s.dmg, s.type, s.color);
+          if (s.daimonji) this.daimonji(s.x, s.y, s.dmg * s.daimonji, s.type, s.area || 1);
           s.life = 0;
           break;
         }
@@ -1353,10 +1449,28 @@ class DungeonGame {
     this.shots = this.shots.filter(s => s.life > 0 && s.x > 0 && s.y > 0 && s.x < ARENA && s.y < ARENA);
   }
 
+  /** 大: 가운데에서 위·왼쪽·오른쪽·왼아래·오른아래로 불기둥이 차례로 번짐 */
+  daimonji(x, y, dmg, type, area) {
+    const arms = [[0, -1], [-1, 0], [1, 0], [-0.75, 0.85], [0.75, 0.85]], step = 28 * area;
+    this.fx.push({ kind: 'flame', x, y, r: 34 * area, life: 0.9, max: 0.9, big: true });
+    this.shake = Math.max(this.shake, 6);
+    for (let k = 1; k <= 4; k++) {
+      setTimeout(() => {
+        for (const [dx, dy] of arms) {
+          const fx = x + dx * step * k, fy = y + dy * step * k;
+          this.fx.push({ kind: 'flame', x: fx, y: fy, r: 24 * area, life: 0.8, max: 0.8 });
+          for (const e of this.targetsList) if (e.hp > 0 && dist2(e, { x: fx, y: fy }) < (24 * area + e.r) ** 2) this.damage(e, dmg / 3, type, { x, y }, 50, true);
+          if (this.parts.length < 680) this.part('flame', fx, fy - 6, rand(-20, 20), rand(-90, -40), 0.5, rand(5, 9), '#ff8a1a');
+        }
+        SFX.play('explode', 60);
+      }, k * 55);
+    }
+  }
+
   explode(x, y, r, dmg, type, color, loud) {
     for (const e of this.targetsList) if (e.hp > 0 && dist2({ x, y }, e) < (r + e.r) ** 2) this.damage(e, dmg, type, { x, y }, 70);
     this.parts.push({ kind: 'ring', x, y, r: 6, R: r, life: 0.25, max: 0.25, color: loud ? '#ffffff' : '#ffe680', w: 5 });
-    this.burst(x, y, color, loud ? 20 : 10, 200);
+    this.burst(x, y, color, loud ? 20 : 10, 200, type === '불꽃' ? 'flame' : 'spark');
     SFX.play('explode', 160);
   }
 
@@ -1386,7 +1500,7 @@ class DungeonGame {
           }
           for (let i = 0; i < 2; i++) {
             const a = f.a + rand(-f.spread, f.spread), r = rand(20, f.len);
-            if (this.parts.length < 700) this.parts.push({ kind: 'puff', x: f.x + Math.cos(a) * r, y: f.y + Math.sin(a) * r, vx: Math.cos(a) * 60, vy: Math.sin(a) * 60, life: 0.3, max: 0.3, size: rand(4, 9), color: pickOne([f.color, '#c4b5ff', '#ffffff']) });
+            if (this.parts.length < 700) this.parts.push({ kind: f.type === '불꽃' ? 'flame' : 'puff', x: f.x + Math.cos(a) * r, y: f.y + Math.sin(a) * r, vx: Math.cos(a) * 90, vy: Math.sin(a) * 90 - (f.type === '불꽃' ? 30 : 0), life: 0.35, max: 0.35, size: rand(5, 11), color: f.type === '불꽃' ? pickOne(['#ff3d1a', '#ff6a1a', '#ffb238', '#ffe680']) : pickOne([f.color, '#ffffff']) });
           }
         }
       } else if (f.kind === 'slash') {
@@ -1665,6 +1779,10 @@ class DungeonGame {
     }
     const inView = (x, y, m = 120) => x > this.cam.x - m && x < this.cam.x + vw + m && y > this.cam.y - m && y < this.cam.y + vh + m;
     this.decor.forEach(d => { if (inView(d.x, d.y)) c.drawImage(d.img, d.x - d.w / 2, d.y - d.h, d.w, d.h); });
+    // 바닥을 살짝 어둡게: 밝은 바이옴(설원·사막)에서도 기술 이펙트가 잘 보이게
+    const dim = (FLOOR_DIM[this.biome] ?? 0.25) + this.ultDark * 0.4;
+    c.fillStyle = `rgba(6,8,22,${dim})`;
+    c.fillRect(this.cam.x - 10, this.cam.y - 10, vw + 20, vh + 20);
 
     this.drawArenaRing(c);
     this.drawGroundFx(c);
@@ -1768,6 +1886,23 @@ class DungeonGame {
 
   drawBossLaser(c) {
     const b = this.boss;
+    if (b && b.state === 'cross') {
+      c.save();
+      c.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < b.crossN; i++) {
+        c.save();
+        c.translate(b.x, b.y - 30);
+        c.rotate(b.crossA + i * Math.PI * 2 / b.crossN);
+        const w = 34 + Math.sin(this.clock * 40 + i) * 5;
+        c.fillStyle = 'rgba(255,200,60,.25)'; c.fillRect(0, -w * 1.5, 620, w * 3);
+        c.fillStyle = hexA(b.color, 0.8); c.fillRect(0, -w / 2, 620, w);
+        c.fillStyle = '#fff6c0'; c.fillRect(0, -w / 5, 620, w / 2.5);
+        c.restore();
+      }
+      glowDot(c, b.x, b.y - 30, 70 + Math.sin(this.clock * 12) * 8, 'rgba(255,215,90,.45)');
+      c.restore();
+      return;
+    }
     if (!b || b.state !== 'laser') return;
     const len = 760, w = 30 + Math.sin(this.clock * 40) * 4;
     c.save();
@@ -1967,7 +2102,17 @@ class DungeonGame {
         c.beginPath(); c.ellipse(t.x, t.y, t.r * k, t.r * 0.65 * k, 0, 0, 7); c.fill();
         c.strokeStyle = 'rgba(255,140,140,.95)'; c.lineWidth = 2;
         c.beginPath(); c.ellipse(t.x, t.y, t.r, t.r * 0.65, 0, 0, 7); c.stroke();
-        if (t.rock) {
+        if (t.star) {
+          const h = (1 - k) * 520, x0 = t.x + h * 0.35, y0 = t.y - h;
+          c.globalCompositeOperation = 'lighter';
+          c.strokeStyle = hexA(t.color, 0.6); c.lineWidth = 8; c.lineCap = 'round';
+          c.beginPath(); c.moveTo(x0 + 50, y0 - 140); c.lineTo(x0, y0); c.stroke();
+          glowDot(c, x0, y0, 22, hexA(t.color, 0.45));
+          c.fillStyle = '#fff6c0';
+          c.beginPath();
+          for (let q = 0; q < 10; q++) { const rr = q % 2 ? 5 : 12, a = q * Math.PI / 5 + this.clock * 6; c.lineTo(x0 + Math.cos(a) * rr, y0 + Math.sin(a) * rr); }
+          c.fill();
+        } else if (t.rock) {
           const h = (1 - k) * 420;
           c.fillStyle = hexA(t.color, 0.35); c.fillRect(t.x - 6, t.y - h - 60, 12, 60);
           c.fillStyle = t.color; c.beginPath(); c.arc(t.x, t.y - h, 12, 0, 7); c.fill();
@@ -1985,6 +2130,24 @@ class DungeonGame {
   }
 
   drawShots(c) {
+    // 1) 어두운 테두리 (밝은 바닥 위에서도 모양이 보이게)
+    c.save();
+    c.fillStyle = 'rgba(0,0,10,.32)';
+    c.beginPath();
+    for (const s of this.shots) { const r = s.r * (s.big ? 2.4 : 1.9) + 2; c.moveTo(s.x + r, s.y); c.arc(s.x, s.y, r, 0, 7); }
+    c.fill();
+    for (const f of this.fx) {
+      if (f.kind === 'beam' || f.kind === 'sweep') {
+        c.save(); c.translate(f.x, f.y); c.rotate(f.a);
+        c.fillStyle = `rgba(0,0,10,${0.3 * Math.min(1, f.life / f.max * 2)})`;
+        c.fillRect(0, -f.w * 0.9, f.len, f.w * 1.8);
+        c.restore();
+      } else if (f.kind === 'flame' || f.kind === 'pillar' || f.kind === 'spike') {
+        glowDot(c, f.x, f.y - 10, (f.r || 24) * 1.1, 'rgba(0,0,10,.22)');
+      }
+    }
+    c.restore();
+    // 2) 빛나는 본체
     c.save();
     c.globalCompositeOperation = 'lighter';
     this.shots.forEach(sh => drawShot(c, sh, this.clock));
@@ -1995,9 +2158,14 @@ class DungeonGame {
   drawEnemyBullets(c) {
     c.save();
     c.globalCompositeOperation = 'lighter';
+    this.ebullets.forEach(b => { c.fillStyle = hexA(b.color, 0.3); c.beginPath(); c.arc(b.x, b.y, b.r * 2, 0, 7); c.fill(); });
+    c.restore();
+    // 적 탄은 어두운 테두리 + 붉은 고리로 내 공격과 구분
+    c.save();
     this.ebullets.forEach(b => {
-      c.fillStyle = hexA(b.color, 0.35); c.beginPath(); c.arc(b.x, b.y, b.r * 1.9, 0, 7); c.fill();
+      c.fillStyle = 'rgba(20,0,10,.8)'; c.beginPath(); c.arc(b.x, b.y, b.r + 2.5, 0, 7); c.fill();
       c.fillStyle = b.color; c.beginPath(); c.arc(b.x, b.y, b.r, 0, 7); c.fill();
+      c.strokeStyle = '#ff3355'; c.lineWidth = 1.5; c.beginPath(); c.arc(b.x, b.y, b.r + 1, 0, 7); c.stroke();
       c.fillStyle = '#ffffff'; c.beginPath(); c.arc(b.x, b.y, b.r * 0.45, 0, 7); c.fill();
     });
     c.restore();
@@ -2021,6 +2189,12 @@ class DungeonGame {
         const r = q.r + (q.R - q.r) * (1 - k);
         c.strokeStyle = hexA(q.color, k); c.lineWidth = (q.w || 3) * k + 1;
         c.beginPath(); c.ellipse(q.x, q.y, r, r * 0.7, 0, 0, 7); c.stroke();
+      } else if (q.kind === 'flame') {
+        const s = q.size * (0.4 + k * 0.8);
+        c.fillStyle = hexA(q.color, k);
+        c.beginPath(); c.moveTo(q.x, q.y - s * 1.8); c.quadraticCurveTo(q.x + s, q.y - s * 0.2, q.x, q.y + s * 0.6); c.quadraticCurveTo(q.x - s, q.y - s * 0.2, q.x, q.y - s * 1.8); c.fill();
+        c.fillStyle = `rgba(255,240,180,${k})`;
+        c.beginPath(); c.arc(q.x, q.y - s * 0.1, s * 0.35, 0, 7); c.fill();
       } else if (q.kind === 'line') {
         c.save(); c.translate(q.x, q.y); c.rotate(q.a);
         c.fillStyle = hexA(q.color, 0.6 * k); c.fillRect(0, -q.w / 2, q.len, q.w);
@@ -2084,5 +2258,6 @@ const BOSS_SIG = {
   '페어리': ['pull', 'waves'], '풀': ['puddles', 'waves'], '벌레': ['waves', 'puddles'], '노말': ['waves', 'meteors'],
   '격투': ['teleport', 'meteors'], '비행': ['waves', 'laser'],
 };
+const FLOOR_DIM = { SNOW: 0.48, DESERT: 0.4, MEADOW: 0.32, SEA: 0.3, VILLAGE: 0.3, FOREST: 0.26, CAVE: 0.18, VOLCANO: 0.2, GHOST: 0.15 };
 const BOSS_SIG_ALL = new Set(['laser', 'meteors', 'puddles', 'grid', 'teleport', 'waves', 'pull']);
 const typeColorHit = t => ({ '불꽃': '#ffb238', '물': '#8fd3ff', '전기': '#fff27a', '풀': '#9dff8a', '얼음': '#dff8ff', '고스트': '#b38cff', '독': '#d08cff' }[t] || '#ffffff');

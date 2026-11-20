@@ -286,3 +286,23 @@
 .bossbar .lv { font-size: 12px; }
 .banner.legend { color: #ffe680; text-shadow: 0 0 18px #ffb800, 0 3px 0 #000; }
 .cap-ball-btn small { display: block; font-size: 10px; color: #9fe8a8; }
+
+/* ---------- 난이도 ---------- */
+.step small { font-size: 12px; color: #8a94ad; font-weight: 500; margin-left: 6px; }
+.tier-pick { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.tier { --c: #6d8cff; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 8px; color: #e6e9f2;
+  background: #1c2130; border: 2px solid #2f3850; border-radius: 12px; cursor: pointer; font: inherit; transition: transform .12s, border-color .12s; }
+.tier:hover:not(.locked) { transform: translateY(-3px); border-color: var(--c); }
+.tier.on { border-color: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 30%, transparent), 0 0 22px color-mix(in srgb, var(--c) 35%, transparent); background: color-mix(in srgb, var(--c) 14%, #1c2130); }
+.tier .ti-icon { font-size: 26px; }
+.tier b { font-size: 16px; letter-spacing: 1px; color: var(--c); }
+.tier small { font-size: 11px; color: #aab3c8; }
+.tier em { font-style: normal; font-size: 10.5px; color: #8a94ad; text-align: center; line-height: 1.45; margin-top: 4px; }
+.tier.locked { opacity: .45; cursor: not-allowed; filter: grayscale(.7); }
+.t-easy { --c: #6dff9a; } .t-normal { --c: #6d8cff; } .t-hard { --c: #ffb238; } .t-extreme { --c: #ff4d6d; } .t-nightmare { --c: #c38cff; }
+.timeline em[data-tier]::before { content: attr(data-tier) ' · '; color: #ffd84a; }
+.res-unlock { font-size: 16px; color: #c9ffb0; margin-top: 6px; }
+
+/* ---------- 카드 키보드 선택 ---------- */
+.pick-keys { font-size: 12px; color: #8a94ad; margin-top: -6px; }
+.pick-card.sel { transform: translateY(-8px) scale(1.04); border-color: #fff; box-shadow: 0 0 0 3px var(--c, #ffd84a), 0 0 30px color-mix(in srgb, var(--c, #ffd84a) 55%, transparent); }

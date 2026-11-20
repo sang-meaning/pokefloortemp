@@ -17,7 +17,7 @@ const MOVES = {
   // 불꽃
   '불꽃세례': { t: '불꽃', p: 'fireball', cd: 1.0, explode: 52 },
   '화염방사': { t: '불꽃', p: 'breath', cd: 1.4, len: 230, mul: 0.55 },
-  '불대문자': { t: '불꽃', p: 'nova', cd: 2.4, n: 10, kind: 'fire', mul: 1.2 },
+  '불대문자': { t: '불꽃', p: 'daimonji', cd: 2.2, mul: 1.0 },
   '화염자동차': { t: '불꽃', p: 'orbit', n: 2, kind: 'flame', mul: 0.75, R: 70 },
   // 물
   '물대포': { t: '물', p: 'beam', cd: 1.05 },
@@ -181,6 +181,15 @@ const CAST = {
   fireball(g, mb, s, tgt, ang) {
     for (let i = 0; i <= xt(g, mb); i++) {
       g.shot(mb, s, ang + (i - xt(g, mb) / 2) * 0.25, { r: 9, speed: 380, kind: 'fire', explode: (s.explode || 58) * ar(g, mb) });
+    }
+    SFX.play('shoot', 90);
+    return true;
+  },
+  /** 불대문자: 커다란 불덩이가 날아가 터지면서 '大' 모양으로 불기둥이 번짐 */
+  daimonji(g, mb, s, tgt, ang) {
+    for (let i = 0; i <= xt(g, mb); i++) {
+      g.shot(mb, s, ang + (i - xt(g, mb) / 2) * 0.35, { r: 15, speed: 400, kind: 'fire', big: true, explode: 50 * ar(g, mb),
+        daimonji: 1.6 * (s.mul || 1), area: ar(g, mb), homing: 2.5, life: 1.8 });
     }
     SFX.play('shoot', 90);
     return true;

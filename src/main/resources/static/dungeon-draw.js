@@ -36,6 +36,26 @@ const SHADOW = (() => {
 
 function glowDot(c, x, y, r, col) { c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill(); }
 
+/** 불꽃 모양 (꼬리가 a 반대쪽으로 길게, 겹겹이 빨강 → 주황 → 노랑 → 흰 심지) */
+const FLAME_COLS = ['rgba(255,50,20,.55)', '#ff6a1a', '#ffb238', '#fff3c0'];
+function drawFlame(c, x, y, r, a, t, seed = 0) {
+  c.save();
+  c.translate(x, y);
+  c.rotate(a + Math.PI);
+  for (let k = 0; k < 4; k++) {
+    const s = r * (1 - k * 0.22), len = s * (2.4 + Math.sin(t * 30 + seed + k) * 0.4);
+    c.fillStyle = FLAME_COLS[k];
+    c.beginPath();
+    c.moveTo(-s, 0);
+    c.quadraticCurveTo(-s * 0.9, -s * 1.05, 0, -s);
+    c.quadraticCurveTo(len * 0.55, -s * 0.7 + Math.sin(t * 40 + seed) * s * 0.25, len, Math.sin(t * 25 + seed) * s * 0.3);
+    c.quadraticCurveTo(len * 0.55, s * 0.7 + Math.sin(t * 33 + seed) * s * 0.25, 0, s);
+    c.quadraticCurveTo(-s * 0.9, s * 1.05, -s, 0);
+    c.fill();
+  }
+  c.restore();
+}
+
 /* ---------- 궤도 (꽃잎댄스, 화염자동차, 휘감기, 고속스핀, 리플렉터, 강철 톱니) ---------- */
 function drawOrbs(c, mb, t) {
   const kind = mb.orbKind || mb.skill.kind || (mb.type === '강철' ? 'gear' : 'leaf');
@@ -95,7 +115,8 @@ function drawShot(c, s, t) {
   const ang = Math.atan2(s.vy, s.vx);
   switch (s.kind) {
     case 'fire':
-      glowDot(c, s.x, s.y, s.r * 2.4, 'rgba(255,120,30,.35)'); glowDot(c, s.x, s.y, s.r, '#ffb238'); glowDot(c, s.x, s.y, s.r * 0.5, '#fff3c0');
+      glowDot(c, s.x, s.y, s.r * 2.6, 'rgba(255,90,20,.28)');
+      drawFlame(c, s.x, s.y, s.r, ang, t, s.t0 * 10);
       return;
     case 'shadow':
       glowDot(c, s.x, s.y, s.r * 1.8, 'rgba(110,60,180,.4)'); glowDot(c, s.x, s.y, s.r, '#4a2a7a'); glowDot(c, s.x, s.y, s.r * 0.45, '#c9a6ff');
@@ -312,6 +333,11 @@ function drawFx(c, f, t) {
     c.fillStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.ellipse(f.x1, f.y1, 18 * p, 6 * p, 0, 0, 7); c.fill();
     if (f.s.kind === 'egg') { c.fillStyle = '#fff4e0'; c.beginPath(); c.ellipse(x, y, 7, 9, 0, 0, 7); c.fill(); c.fillStyle = '#ff9a9a'; c.fillRect(x - 3, y - 2, 3, 3); }
     else { glowDot(c, x, y, 12, 'rgba(160,70,220,.4)'); glowDot(c, x, y, 7, '#9a4fd0'); }
+  } else if (f.kind === 'flame') {
+    const g = Math.sin((1 - k) * Math.PI) ;
+    glowDot(c, f.x, f.y - 6, f.r * 1.6 * g, 'rgba(255,80,20,.25)');
+    drawFlame(c, f.x, f.y, f.r * 0.55 * (0.5 + g), Math.PI / 2, t, f.x);
+    if (f.big) drawFlame(c, f.x, f.y - 4, f.r * 0.4 * (0.5 + g), Math.PI / 2 + 0.3, t, f.y);
   } else if (f.kind === 'mine') {
     const armed = f.arm <= 0, pul = armed ? 0.6 + Math.sin(t * 10 + f.x) * 0.4 : 0.3;
     glowDot(c, f.x, f.y, 14, hexA(f.color, 0.25 * pul));

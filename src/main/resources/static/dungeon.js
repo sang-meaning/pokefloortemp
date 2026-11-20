@@ -4,7 +4,7 @@ renderNav('dungeon');
 const $ = id => document.getElementById(id);
 const state = {
   today: null, collection: [], shop: null,
-  biome: null, party: [], bring: {},
+  biome: null, party: [], bring: {}, tier: null,
   run: null, game: null, finish: null, caught: null,
 };
 
@@ -32,6 +32,9 @@ async function loadLobby() {
   $('starter').classList.toggle('hidden', collection.length > 0);
   if (!collection.length) renderStarter();
   if (!state.biome) state.biome = today.options[0].id;
+  const open = today.tiers.filter(t => t.unlocked);
+  if (!state.tier || !open.some(t => t.id === state.tier)) state.tier = open[open.length - 1].id;
+  renderTiers();
   if (!state.party.length && collection.length) {
     state.party = [...collection].sort((a, b) => b.level - a.level || b.exp - a.exp).slice(0, 3).map(o => o.pokemon.id);
   }
@@ -59,6 +62,24 @@ $('starter-list').addEventListener('click', async e => {
   SFX.play('caught');
   state.party = [+b.dataset.id];
   loadLobby();
+});
+
+const TIER_ICON = { EASY: '🌱', NORMAL: '⚔', HARD: '🔥', EXTREME: '💀', NIGHTMARE: '👁' };
+function renderTiers() {
+  $('tier-pick').innerHTML = state.today.tiers.map(t => `
+    <button class="tier t-${t.id.toLowerCase()}${state.tier === t.id ? ' on' : ''}${t.unlocked ? '' : ' locked'}" data-id="${t.id}" ${t.unlocked ? '' : 'disabled'}>
+      <span class="ti-icon">${t.unlocked ? TIER_ICON[t.id] : '🔒'}</span>
+      <b>${t.label}</b>
+      <small>${t.nameKo}${t.cleared ? ' · ✔ 클리어' : ''}</small>
+      <em>${t.unlocked ? `적 체력 ×${t.hp} · 공격 ×${t.dmg}<br>보상 💰×${t.gold} · 경험치 ×${t.exp}${t.legend > 1 ? `<br>전설 보스 ×${t.legend}` : ''}` : `${state.today.tiers[t.no - 2]?.label} 클리어하면 열려요`}</em>
+    </button>`).join('');
+}
+$('tier-pick').addEventListener('click', e => {
+  const b = e.target.closest('.tier');
+  if (!b || b.disabled) return;
+  state.tier = b.dataset.id;
+  SFX.play('open');
+  renderTiers();
 });
 
 function biomePreview(canvas, biome) {
@@ -199,7 +220,7 @@ $('go').addEventListener('click', async () => {
   $('go').disabled = true;
   try {
     const bring = Object.fromEntries(Object.entries(state.bring).filter(([, n]) => n > 0));
-    state.run = await api('/api/runs', { method: 'POST', body: { biome: state.biome, party: state.party, bring } });
+    state.run = await api('/api/runs', { method: 'POST', body: { biome: state.biome, party: state.party, bring, tier: state.tier } });
     startGame();
   } catch (err) {
     $('go-msg').textContent = err.message;
@@ -242,6 +263,9 @@ const hooks = {
       </button>`).join('');
     $('pick').classList.remove('hidden');
     SFX.play('open');
+    state.pickSel = 0;
+    state.pickOpenAt = performance.now();
+    markPick();
     state.choosePick = id => {
       $('pick').classList.add('hidden');
       state.choosePick = null;
@@ -270,6 +294,7 @@ const hooks = {
     const t = Math.min(RUN_TIME, g.time);
     $('tl-fill').style.width = `${t / RUN_TIME * 100}%`;
     const left = Math.max(0, RUN_TIME - t);
+    $('tl-text').dataset.tier = g.tier.label;
     $('tl-text').textContent = g.boss ? (g.boss.state === 'dead' ? '승리!' : '보스전') : `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')} 남음`;
     $('gold').textContent = `💰 ${Math.floor(g.gold)}`;
     $('kills').textContent = `처치 ${g.kills}`;
@@ -293,6 +318,17 @@ const hooks = {
 $('pick-cards').addEventListener('click', e => {
   const c = e.target.closest('.pick-card');
   if (c && state.choosePick) state.choosePick(c.dataset.id);
+});
+
+/** 키보드로 고르는 카드 표시 */
+function markPick() {
+  document.querySelectorAll('.pick-card').forEach((c, i) => c.classList.toggle('sel', i === state.pickSel));
+}
+$('pick-cards').addEventListener('mousemove', e => {
+  const c = e.target.closest('.pick-card');
+  if (!c) return;
+  state.pickSel = [...document.querySelectorAll('.pick-card')].indexOf(c);
+  markPick();
 });
 
 function banner(text, kind = 'info', secs = 2.2) {
@@ -341,10 +377,19 @@ function renderBuffs() {
 
 function bindInput(g) {
   window.addEventListener('keydown', e => {
-    if (state.choosePick && ['Digit1', 'Digit2', 'Digit3'].includes(e.code)) {
+    if (state.choosePick) {
       const cards = document.querySelectorAll('.pick-card');
-      const c = cards[+e.code.slice(-1) - 1];
-      if (c) state.choosePick(c.dataset.id);
+      e.preventDefault();
+      g.keys.clear();
+      if (['ArrowLeft', 'KeyA', 'ArrowUp', 'KeyW'].includes(e.code)) { state.pickSel = (state.pickSel + cards.length - 1) % cards.length; markPick(); SFX.play('coin'); }
+      else if (['ArrowRight', 'KeyD', 'ArrowDown', 'KeyS'].includes(e.code)) { state.pickSel = (state.pickSel + 1) % cards.length; markPick(); SFX.play('coin'); }
+      else if (['Enter', 'Space', 'NumpadEnter'].includes(e.code)) {
+        // 이동하다 눌린 키로 실수로 고르지 않게: 연타 무시 + 창이 뜬 직후 0.25초는 무시
+        if (!e.repeat && performance.now() - state.pickOpenAt > 250 && cards[state.pickSel]) state.choosePick(cards[state.pickSel].dataset.id);
+      } else if (['Digit1', 'Digit2', 'Digit3'].includes(e.code)) {
+        const c = cards[+e.code.slice(-1) - 1];
+        if (c && !e.repeat) state.choosePick(c.dataset.id);
+      }
       return;
     }
     if (['Digit1', 'Digit2', 'Digit3'].includes(e.code)) { g.usePotion(+e.code.slice(-1) - 1); return; }
@@ -547,7 +592,8 @@ function burst(color, n, stars) {
 function showResult() {
   const f = state.finish, g = state.game;
   $('result').classList.remove('hidden');
-  $('res-title').innerHTML = f.won ? '🏆 던전 클리어!' : '💫 눈앞이 캄캄해졌다…';
+  $('res-title').innerHTML = (f.won ? `🏆 ${state.run.tier.label} 클리어!` : '💫 눈앞이 캄캄해졌다…')
+    + (f.tierUnlocked ? `<div class="res-unlock">🔓 ${f.tierUnlocked} 단계가 열렸어요!</div>` : '');
   $('res-gold').innerHTML = `<span>💰 +<b id="gold-count">0</b></span><small>${f.won ? '' : '쓰러져서 골드 절반 · '}처치 ${g.kills} · 던전 Lv.${g.lv} · 보유 ${f.walletGold.toLocaleString()}</small>`;
   // 골드 숫자 올라가기
   const target = f.gold;

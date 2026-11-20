@@ -66,6 +66,7 @@ public class RunService {
         Pokemon boss;
         int bossLevel;
         int leaderLevel;
+        Tier tier = Tier.NORMAL;
         Map<String, Integer> brought = new HashMap<>();
         boolean finished;
         boolean won;
@@ -79,7 +80,9 @@ public class RunService {
         LocalDate date = LocalDate.now();
         List<Biome> all = new ArrayList<>(List.of(Biome.values()));
         Collections.shuffle(all, new Random(date.toEpochDay() * 7919L));
-        return new Today(date.toString(), all.subList(0, 3).stream().map(RunService::option).toList(), wallet.gold());
+        int cleared = wallet.clearedTier();
+        return new Today(date.toString(), all.subList(0, 3).stream().map(RunService::option).toList(), wallet.gold(),
+                cleared, Arrays.stream(Tier.values()).map(t -> t.info(cleared)).toList());
     }
 
     static BiomeOption option(Biome b) {
@@ -96,6 +99,15 @@ public class RunService {
             biome = Biome.valueOf(String.valueOf(req.biome()).toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "없는 바이옴이에요");
+        }
+        Tier tier;
+        try {
+            tier = req.tier() == null ? Tier.EASY : Tier.valueOf(req.tier().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "없는 난이도예요");
+        }
+        if (tier.no() > wallet.clearedTier() + 1) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "앞 단계를 먼저 클리어해야 열려요");
         }
         List<Integer> party = req.party() == null ? List.of() : req.party().stream().distinct().toList();
         if (party.isEmpty() || party.size() > MAX_PARTY) {
@@ -127,7 +139,7 @@ public class RunService {
         }
 
         List<Pokemon> all = pokemonService.activeEntities();
-        Pokemon boss = pickBoss(all, biome, party);
+        Pokemon boss = pickBoss(all, biome, party, tier);
         // 일반 몬스터로는 전설이 나오지 않음
         List<PokemonDto> mobs = pickMobs(all.stream().filter(p -> !Legendary.is(p.getId())).toList(), biome);
 
@@ -138,14 +150,16 @@ public class RunService {
         s.bossId = boss.getId();
         s.bossShiny = CollectionService.rollShiny();
         s.leaderLevel = members.getFirst().combat().level();
-        s.bossLevel = (int) Math.round(avgLv) + 3 + (Legendary.is(boss.getId()) ? 5 : 0);
+        s.tier = tier;
+        s.bossLevel = Math.max(1, (int) Math.round(avgLv) + 3 + tier.bossLv + (Legendary.is(boss.getId()) ? 5 : 0));
         sessions.put(s.id, s);
 
         // 난이도: 파티 평균 레벨이 오를수록 조금씩 (레벨당 능력치 +2% 보다 완만한 +1.2%) → 키운 만큼 편해짐
         double difficulty = (1 + 0.012 * (avgLv - 1)) * (1 + 0.05 * (members.size() - 1))
                 * (Legendary.is(boss.getId()) ? 1.15 : 1);
         return new Start(s.id, option(biome), members, PokemonDto.from(boss), s.bossShiny,
-                collection.canAcquire(boss.getId(), s.bossShiny), s.bossLevel, mobs, brought, difficulty, wallet.gold());
+                collection.canAcquire(boss.getId(), s.bossShiny), s.bossLevel, mobs, brought, difficulty, wallet.gold(),
+                tier.info(wallet.clearedTier()));
     }
 
     /**
@@ -170,7 +184,7 @@ public class RunService {
     }
 
     /** 보스: 바이옴 보스 타입, 종족값 높은 쪽, 아직 없는 포켓몬이 더 잘 나옴 */
-    private Pokemon pickBoss(List<Pokemon> pool, Biome biome, List<Integer> party) {
+    private Pokemon pickBoss(List<Pokemon> pool, Biome biome, List<Integer> party, Tier tier) {
         List<Pokemon> cands = pool.stream().filter(p -> hasType(p, biome.bossTypes()) && !party.contains(p.getId())).toList();
         if (cands.isEmpty()) cands = pool;
         List<Pokemon> strong = cands.stream().filter(p -> p.baseTotal() >= 400).toList();
@@ -179,7 +193,7 @@ public class RunService {
         double[] w = new double[cands.size()];
         for (int i = 0; i < w.length; i++) {
             Pokemon c = cands.get(i);
-            w[i] = (collection.isOwned(c.getId()) ? 1 : 3) * (Legendary.is(c.getId()) ? Legendary.APPEAR_WEIGHT : 1);
+            w[i] = (collection.isOwned(c.getId()) ? 1 : 3) * (Legendary.is(c.getId()) ? Legendary.APPEAR_WEIGHT * tier.legend : 1);
             total += w[i];
         }
         double r = ThreadLocalRandom.current().nextDouble(total);
@@ -218,7 +232,7 @@ public class RunService {
 
         // 골드: 주운 만큼, 상한 검사. 쓰러지면 절반만. 부적금화면 상한도 1.5배
         double goldMul = s.brought.containsKey("amulet-coin") ? 1.5 : 1;
-        int cap = (int) ((kills * 3 + elites * 25 + (won ? 400 : 0) + 80) * goldMul * 1.6);
+        int cap = (int) ((kills * 3 + elites * 25 + (won ? 400 : 0) + 80) * goldMul * 1.6 * s.tier.gold);
         int gold = Math.max(0, Math.min(req.gold(), cap));
         if (!won) gold /= 2;
         long walletGold = wallet.add(gold);
@@ -233,7 +247,7 @@ public class RunService {
         }
 
         // 경험치: 기본 + 처치 수 + 승리 보너스(보스 레벨이 높을수록). 쓰러지면 60%, 행복의알 1.5배
-        double expMul = (won ? 1 : 0.6) * (s.brought.containsKey("lucky-egg") ? 1.5 : 1);
+        double expMul = (won ? 1 : 0.6) * (s.brought.containsKey("lucky-egg") ? 1.5 : 1) * s.tier.exp;
         int exp = (int) Math.round((40 + Math.min(kills, 600) * 0.3 + (won ? 80 + s.bossLevel * 4 : 0)) * expMul);
         List<ExpGain> gains = new ArrayList<>();
         for (int id : s.party) {
@@ -248,7 +262,11 @@ public class RunService {
                         : Legendary.is(s.bossId) ? "★ 전설의 포켓몬! 잡기 어려워요 (최대 3번)" : "몬스터볼을 던져 보세요 (최대 3번)")
                 : "이미 가진 포켓몬이라 놓아줬어요";
         if (won && !capturable) walletGold = wallet.add(100);   // 이미 가진 보스 → 보답 골드
-        return new Finish(won, gold, walletGold, gains, capturable, note, balls(s));
+        String unlocked = null;
+        if (won && wallet.clearTier(s.tier.no()) && s.tier.ordinal() + 1 < Tier.values().length) {
+            unlocked = Tier.values()[s.tier.ordinal() + 1].label;
+        }
+        return new Finish(won, gold, walletGold, gains, capturable, note, balls(s), unlocked);
     }
 
     /* ---------- 포획 ---------- */
