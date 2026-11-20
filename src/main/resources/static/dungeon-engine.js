@@ -427,7 +427,22 @@ class DungeonGame {
         this.hooks.onBanner('강한 야생 포켓몬이 나타났다!', 'elite');
       }
     });
-    if (this.kills >= this.killTarget) this.toBoss();
+    if (this.time >= RUN_TIME) this.toBoss();   // 3분이 되면 자동으로 보스
+    if (this.kills >= this.killTarget && !this.events.has('ready')) {
+      this.events.add('ready');
+      this.hooks.onBanner('목표 달성! 보스에 도전할 수 있어요 (B)', 'win');
+      SFX.play('starup');
+    }
+  }
+
+  /** 목표 마릿수를 채우면 3분 전에도 보스에 도전 가능 */
+  canChallenge() {
+    return this.phase === 'play' && !this.paused && this.kills >= this.killTarget;
+  }
+
+  challenge() {
+    if (!this.canChallenge()) return;
+    this.toBoss();
   }
 
   /* ---------- 3분 → 보스 ---------- */

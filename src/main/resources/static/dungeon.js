@@ -71,7 +71,7 @@ function renderTiers() {
       <span class="ti-icon">${t.unlocked ? TIER_ICON[t.id] : '🔒'}</span>
       <b>${t.label}</b>
       <small>${t.nameKo}${t.cleared ? ' · ✔ 클리어' : ''}</small>
-      <em>${t.unlocked ? `적 체력 ×${t.hp} · 공격 ×${t.dmg}<br>보상 💰×${t.gold} · 경험치 ×${t.exp}${t.legend > 1 ? `<br>전설 보스 ×${t.legend}` : ''}` : `${state.today.tiers[t.no - 2]?.label} 클리어하면 열려요`}</em>
+      <em>${t.unlocked ? `적 체력 ×${t.hp} · 공격 ×${t.dmg}<br>보상 💰×${t.gold} · 경험치 ×${t.exp}<br>전설 보스 등장 ${+(t.legend * 100).toFixed(1)}%` : `${state.today.tiers[t.no - 2]?.label} 클리어하면 열려요`}</em>
     </button>`).join('');
 }
 $('tier-pick').addEventListener('click', e => {
@@ -291,12 +291,14 @@ const hooks = {
     $('hp-fill').style.width = `${Math.max(0, p.hp / p.maxHp * 100)}%`;
     $('hp-text').textContent = `${Math.max(0, Math.ceil(p.hp))} / ${Math.round(p.maxHp)}`;
     $('hp-fill').parentElement.classList.toggle('low', p.hp / p.maxHp < 0.3);
-    const k = Math.min(g.killTarget, g.kills);
-    $('tl-fill').style.width = `${k / g.killTarget * 100}%`;
+    $('tl-fill').style.width = `${Math.max(Math.min(1, g.kills / g.killTarget), Math.min(1, g.time / RUN_TIME)) * 100}%`;
     $('tl-text').dataset.tier = g.tier.label;
-    $('tl-text').textContent = g.boss ? (g.boss.state === 'dead' ? '승리!' : '보스전') : `보스까지 ${Math.max(0, g.killTarget - g.kills)}마리 · ${Math.floor(g.time / 60)}:${String(Math.floor(g.time % 60)).padStart(2, '0')}`;
+    const left = Math.max(0, RUN_TIME - g.time), clock = `${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`;
+    $('tl-text').textContent = g.boss ? (g.boss.state === 'dead' ? '승리!' : '보스전')
+      : g.kills >= g.killTarget ? `목표 달성! 보스 도전 가능 · 자동 ${clock}` : `보스까지 ${g.killTarget - g.kills}마리 · 자동 ${clock}`;
     $('gold').textContent = `💰 ${Math.floor(g.gold)}`;
     $('kills').textContent = `처치 ${g.kills}`;
+    $('boss-go').classList.toggle('hidden', !g.canChallenge());
     $('xp-fill').style.width = `${Math.min(100, g.xp / xpNeed(g.lv) * 100)}%`;
     $('xp-lv').textContent = `Lv.${g.lv}`;
     if (g.boss) {
@@ -356,6 +358,7 @@ function renderPotions() {
       <img src="${pt.sprite}" alt=""><em>${pt.left}</em><kbd>${i + 1}</kbd>
     </button>`).join('');
 }
+$('boss-go').addEventListener('click', () => { if (state.game?.canChallenge()) state.game.challenge(); });
 $('potions').addEventListener('click', e => {
   const b = e.target.closest('.potion');
   if (b) state.game.usePotion(+b.dataset.i);
@@ -392,6 +395,7 @@ function bindInput(g) {
       return;
     }
     if (['Digit1', 'Digit2', 'Digit3'].includes(e.code)) { g.usePotion(+e.code.slice(-1) - 1); return; }
+    if (e.code === 'KeyB' && g.canChallenge()) { g.challenge(); return; }
     if (e.code === 'Escape') { togglePause(); return; }
     g.keys.add(e.code);
     if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
@@ -472,7 +476,7 @@ function renderBalls(balls, note) {
       <span>×${b.qty}</span>
       <em>${b.rate}%</em>
       ${b.note ? `<small>${escapeHtml(b.note)}</small>` : ''}
-    </button>`).join('') : '<div class="warn">몬스터볼이 없어요! 다음엔 <a href="/shop.html">상점</a>에서 사 오세요.</div>';
+    </button>`).join('') : '<div class="warn">몬스터볼이 없어요! 다음엔 상점에서 사 오세요.</div>';
 }
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));

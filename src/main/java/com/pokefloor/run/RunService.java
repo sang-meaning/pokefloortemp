@@ -38,7 +38,8 @@ public class RunService {
 
     public static final int MAX_PARTY = 3;
     public static final int MAX_THROWS = 3;
-    public static final double MIN_SECONDS = 30;   // 아무리 강해도 보스까지 30초는 걸림
+    public static final double MIN_SECONDS = 30;
+    public static final double RUN_SECONDS = 180;    // 3분이 되면 처치 수와 상관없이 보스   // 아무리 강해도 보스까지 30초는 걸림
 
     private final PokemonService pokemonService;
     private final CollectionService collection;
@@ -188,15 +189,19 @@ public class RunService {
 
     /** 보스: 바이옴 보스 타입, 종족값 높은 쪽, 아직 없는 포켓몬이 더 잘 나옴 */
     private Pokemon pickBoss(List<Pokemon> pool, Biome biome, List<Integer> party, Tier tier) {
-        List<Pokemon> cands = pool.stream().filter(p -> hasType(p, biome.bossTypes()) && !party.contains(p.getId())).toList();
-        if (cands.isEmpty()) cands = pool;
+        List<Pokemon> all = pool.stream().filter(p -> hasType(p, biome.bossTypes()) && !party.contains(p.getId())).toList();
+        // 전설·환상은 단계별 고정 확률(이지 0.5% ~ 나이트메어 5%)로만 등장
+        List<Pokemon> legends = all.stream().filter(p -> Legendary.is(p.getId())).toList();
+        boolean legendRoll = !legends.isEmpty() && ThreadLocalRandom.current().nextDouble() < tier.legend;
+        List<Pokemon> cands = legendRoll ? legends : all.stream().filter(p -> !Legendary.is(p.getId())).toList();
+        if (cands.isEmpty()) cands = pool.stream().filter(p -> !Legendary.is(p.getId())).toList();
         List<Pokemon> strong = cands.stream().filter(p -> p.baseTotal() >= 400).toList();
         if (strong.size() >= 2) cands = strong;
         double total = 0;
         double[] w = new double[cands.size()];
         for (int i = 0; i < w.length; i++) {
             Pokemon c = cands.get(i);
-            w[i] = (collection.isOwned(c.getId()) ? 1 : 3) * (Legendary.is(c.getId()) ? Legendary.APPEAR_WEIGHT * tier.legend : 1);
+            w[i] = (collection.isOwned(c.getId()) ? 1 : 3) * 1;
             total += w[i];
         }
         double r = ThreadLocalRandom.current().nextDouble(total);
@@ -228,7 +233,8 @@ public class RunService {
         double elapsed = Duration.between(s.startedAt, Instant.now()).toMillis() / 1000.0;
         // 목표 마릿수를 쓰러뜨리고 보스를 이겨야 승리 (너무 빠르면 인정 안 함)
         int kills = Math.max(0, Math.min(req.kills(), (int) (elapsed * 12)));
-        boolean won = req.won() && elapsed >= MIN_SECONDS && kills >= s.killTarget;
+        // 승리 인정: 목표 마릿수를 채워 먼저 보스에 도전했거나, 3분을 버텨 자동으로 보스가 나왔을 때
+        boolean won = req.won() && elapsed >= MIN_SECONDS && (kills >= s.killTarget || elapsed >= RUN_SECONDS * 0.8);
         org.slf4j.LoggerFactory.getLogger(RunService.class).info("던전 결과: 보고 승리={} 경과 {}초 처치 {}/{} → 승리 인정={}", req.won(), (int) elapsed, kills, s.killTarget, won);
         s.won = won;
         int elites = Math.max(0, Math.min(req.elites(), 12));
