@@ -56,8 +56,17 @@ public class GameService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "포켓몬이 부족해요 (" + pool.size() + "마리, 필요 " + level.pairs() + "마리). 잠시 후 다시 시도하거나 관리자 페이지에서 추가하세요");
         }
-        Collections.shuffle(pool, ThreadLocalRandom.current());
-        List<PokemonDto> picked = pool.subList(0, level.pairs());
+        // 가중치 뽑기: 전설·환상은 일반 포켓몬보다 훨씬 드물게
+        List<PokemonDto> picked = new ArrayList<>();
+        ThreadLocalRandom rnd = ThreadLocalRandom.current();
+        while (picked.size() < level.pairs()) {
+            double total = pool.stream().mapToDouble(p -> p.legendary() ? com.pokefloor.pokemon.Legendary.APPEAR_WEIGHT : 1).sum();
+            double r = rnd.nextDouble(total);
+            for (PokemonDto p : pool) {
+                r -= p.legendary() ? com.pokefloor.pokemon.Legendary.APPEAR_WEIGHT : 1;
+                if (r <= 0) { picked.add(p); pool.remove(p); break; }
+            }
+        }
 
         // 한 마리당 카드 2장 → 섞기
         List<PokemonDto> deck = new ArrayList<>(picked);

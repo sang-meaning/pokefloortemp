@@ -19,22 +19,24 @@ public final class RunDtos {
     public record StartRequest(String biome, List<Integer> party, Map<String, Integer> bring) {}
 
     /** 던전용 능력치 (종족값 × 별 성장) */
-    public record Combat(double hp, double attack, double defense, double speed, int stars, double multiplier) {}
+    public record Combat(double hp, double attack, double defense, double speed, int level, double multiplier, boolean legendary) {}
 
     public record Member(OwnedDto owned, Combat combat) {}
 
     public record Brought(String code, int itemId, String name, String sprite, int qty, String use, int value) {}
 
+    /** bossLevel: 표시용 보스 레벨 (파티 평균 레벨 + 3) */
     public record Start(String runId, BiomeOption biome, List<Member> party, PokemonDto boss, boolean bossShiny,
-                        boolean bossCapturable, List<PokemonDto> mobs, List<Brought> brought,
+                        boolean bossCapturable, int bossLevel, List<PokemonDto> mobs, List<Brought> brought,
                         double difficulty, long gold) {}
 
     /** used: 던전 안에서 쓴 상처약 {code: 개수}. 안 쓴 것은 인벤토리로 돌아감 */
     public record FinishRequest(boolean won, int kills, int elites, double timeSec, int gold, Map<String, Integer> used) {}
 
-    public record ExpGain(OwnedDto owned, int gained, int expBefore, int starsBefore) {}
+    public record ExpGain(OwnedDto owned, int gained, int expBefore, int levelBefore) {}
 
-    public record Ball(String code, int itemId, String name, String sprite, int qty, int rate) {}
+    /** rate: 이번 보스에게 던졌을 때 포획률(%) - 상황에 따라 다름, note: 이유 */
+    public record Ball(String code, int itemId, String name, String sprite, int qty, int rate, String note) {}
 
     public record Finish(boolean won, int gold, long walletGold, List<ExpGain> exp,
                          boolean capturable, String captureNote, List<Ball> balls) {}

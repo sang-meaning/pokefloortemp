@@ -33,7 +33,7 @@ public class PokemonSeeder implements ApplicationRunner {
 
     public PokemonSeeder(PokemonService service,
                          @Value("${pokefloor.seed.from:1}") int from,
-                         @Value("${pokefloor.seed.to:151}") int to) {
+                         @Value("${pokefloor.seed.to:493}") int to) {
         this.service = service;
         this.from = from;
         this.to = to;
@@ -42,7 +42,11 @@ public class PokemonSeeder implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         if (service.count() == 0) startImport(from, to);
-        else Thread.ofVirtual().name("stats-backfill").start(this::backfillStats);
+        else {
+            Thread.ofVirtual().name("stats-backfill").start(this::backfillStats);
+            // 예전 버전(1세대)에서 올라온 경우: 설정 범위(기본 1~493)에 빠진 번호를 받아 옴
+            if (service.count() < to - from + 1) startImport(from, to);
+        }
     }
 
     /** 예전 버전으로 받은 포켓몬에 종족값 채우기 */

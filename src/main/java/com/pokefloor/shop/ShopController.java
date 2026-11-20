@@ -36,7 +36,8 @@ public class ShopController {
         this.collection = collection;
     }
 
-    public record ShopEntry(String code, ItemDto item, int price, String use, int value, String desc, int qty) {}
+    /** deal: 오늘의 특가(30% 할인), basePrice: 원래 가격 */
+    public record ShopEntry(String code, ItemDto item, int price, int basePrice, boolean deal, String use, int value, String desc, int qty) {}
 
     public record Shop(long gold, List<ShopEntry> entries) {}
 
@@ -48,8 +49,10 @@ public class ShopController {
     public Shop shop() {
         List<ShopEntry> list = ShopItems.ALL.stream().map(e -> {
             Item item = itemRepository.findByCode(e.code()).orElse(null);
-            return new ShopEntry(e.code(), item == null ? null : ItemDto.from(item), e.price(), e.use().name(),
-                    e.value(), e.desc(), item == null ? 0 : items.qty(item.getId()));
+            java.time.LocalDate today = java.time.LocalDate.now();
+            return new ShopEntry(e.code(), item == null ? null : ItemDto.from(item), ShopItems.priceOf(e, today), e.price(),
+                    e.code().equals(ShopItems.dealOf(today)), e.use().name(), e.value(), e.desc(),
+                    item == null ? 0 : items.qty(item.getId()));
         }).toList();
         return new Shop(wallet.gold(), list);
     }
@@ -62,21 +65,21 @@ public class ShopController {
         int qty = req.qty() == null ? 1 : req.qty();
         if (qty < 1 || qty > 20) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "1~20개");
         Item item = items.byCode(e.code());
-        wallet.spend((long) e.price() * qty);
+        wallet.spend((long) ShopItems.priceOf(e, java.time.LocalDate.now()) * qty);
         items.give(item.getId(), qty);
         return shop();
     }
 
-    /** 이상한사탕: 포켓몬 경험치 + (별 3개면 못 씀) */
+    /** 이상한사탕: 레벨 +1 */
     @PostMapping("/api/collection/{pokemonId}/use-item")
     @Transactional
     public OwnedDto use(@PathVariable int pokemonId, @RequestBody UseRequest req) {
         ShopItems.Entry e = ShopItems.byCode(req.code()).filter(x -> x.use() == ShopItems.Use.CANDY)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "포켓몬에게 쓸 수 없는 아이템이에요"));
         OwnedDto before = collection.toDto(collection.entity(pokemonId));
-        if (before.nextStarExp() == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 별 3개예요");
+        if (before.nextLevelExp() == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 Lv.100 이에요");
         items.consume(items.byCode(e.code()).getId(), 1);
-        collection.addExp(pokemonId, e.value());
+        collection.levelUp(pokemonId);
         return collection.toDto(collection.entity(pokemonId));
     }
 }

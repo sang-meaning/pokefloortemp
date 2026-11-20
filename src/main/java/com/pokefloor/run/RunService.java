@@ -12,6 +12,7 @@ import com.pokefloor.player.WalletService;
 import com.pokefloor.pokemon.Pokemon;
 import com.pokefloor.pokemon.PokemonDto;
 import com.pokefloor.pokemon.PokemonService;
+import com.pokefloor.pokemon.Legendary;
 import com.pokefloor.run.RunDtos.*;
 import com.pokefloor.world.Biome;
 import org.springframework.http.HttpStatus;
@@ -38,8 +39,6 @@ public class RunService {
     public static final int MAX_PARTY = 3;
     public static final int MAX_THROWS = 3;
     public static final double RUN_SECONDS = 180;
-    /** 전설은 보스·몬스터로 안 나옴 */
-    private static final Set<Integer> LEGENDARY = Set.of(144, 145, 146, 150, 151);
 
     private final PokemonService pokemonService;
     private final CollectionService collection;
@@ -64,6 +63,9 @@ public class RunService {
         List<Integer> party;
         int bossId;
         boolean bossShiny;
+        Pokemon boss;
+        int bossLevel;
+        int leaderLevel;
         Map<String, Integer> brought = new HashMap<>();
         boolean finished;
         boolean won;
@@ -114,7 +116,7 @@ public class RunService {
                 ShopItems.Entry entry = ShopItems.byCode(e.getKey())
                         .filter(x -> x.use() != ShopItems.Use.BALL && x.use() != ShopItems.Use.CANDY)
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "가지고 갈 수 없는 아이템: " + e.getKey()));
-                int n = Math.max(0, Math.min(e.getValue(), entry.use() == ShopItems.Use.HEAL ? 5 : 1));
+                int n = Math.max(0, Math.min(e.getValue(), entry.use() == ShopItems.Use.HEAL ? 5 : 1));   // 회복약 5개, 나머지 1개
                 if (n == 0) continue;
                 Item item = items.byCode(entry.code());
                 items.consume(item.getId(), n);
@@ -124,31 +126,43 @@ public class RunService {
             }
         }
 
-        List<Pokemon> pool = pokemonService.activeEntities().stream()
-                .filter(p -> !LEGENDARY.contains(p.getId())).toList();
-        Pokemon boss = pickBoss(pool, biome, party);
-        List<PokemonDto> mobs = pickMobs(pool, biome);
+        List<Pokemon> all = pokemonService.activeEntities();
+        Pokemon boss = pickBoss(all, biome, party);
+        // 일반 몬스터로는 전설이 나오지 않음
+        List<PokemonDto> mobs = pickMobs(all.stream().filter(p -> !Legendary.is(p.getId())).toList(), biome);
 
+        double avgLv = members.stream().mapToInt(m -> m.combat().level()).average().orElse(1);
         s.biome = biome;
         s.party = party;
+        s.boss = boss;
         s.bossId = boss.getId();
         s.bossShiny = CollectionService.rollShiny();
+        s.leaderLevel = members.getFirst().combat().level();
+        s.bossLevel = (int) Math.round(avgLv) + 3 + (Legendary.is(boss.getId()) ? 5 : 0);
         sessions.put(s.id, s);
 
-        double avgStars = members.stream().mapToInt(m -> m.combat().stars()).average().orElse(0);
+        // 난이도: 파티 평균 레벨이 오를수록 조금씩 (레벨당 능력치 +2% 보다 완만한 +1.2%) → 키운 만큼 편해짐
+        double difficulty = (1 + 0.012 * (avgLv - 1)) * (1 + 0.05 * (members.size() - 1))
+                * (Legendary.is(boss.getId()) ? 1.15 : 1);
         return new Start(s.id, option(biome), members, PokemonDto.from(boss), s.bossShiny,
-                collection.canAcquire(boss.getId(), s.bossShiny), mobs, brought,
-                1 + 0.15 * avgStars + 0.05 * (members.size() - 1), wallet.gold());
+                collection.canAcquire(boss.getId(), s.bossShiny), s.bossLevel, mobs, brought, difficulty, wallet.gold());
     }
 
-    /** 종족값 × 별 성장 배율 */
+    /**
+     * 던전 능력치 = 종족값 × 레벨 배율(레벨당 +2%).
+     * 전설·환상은 종족값 합을 600(일반 최종 진화의 약 1.2배)으로 눌러서 너무 세지 않게.
+     */
     static Combat combat(OwnedDto o) {
         PokemonDto.Stats st = o.pokemon().stats();
-        int hp = st == null ? 50 : st.hp(), atk = st == null ? 55 : Math.max(st.attack(), st.spAttack());
-        int def = st == null ? 50 : (st.defense() + st.spDefense()) / 2, spd = st == null ? 50 : st.speed();
-        int bst = st == null ? 300 : st.bst();
-        double m = Growth.multiplier(bst, o.stars());
-        return new Combat(hp * m, atk * m, def * m, spd * m, o.stars(), m);
+        double hp = st == null ? 50 : st.hp(), atk = st == null ? 55 : Math.max(st.attack(), st.spAttack());
+        double def = st == null ? 50 : (st.defense() + st.spDefense()) / 2.0, spd = st == null ? 50 : st.speed();
+        boolean legend = o.pokemon().legendary();
+        if (legend && st != null && st.bst() > Legendary.STAT_CAP) {
+            double k = (double) Legendary.STAT_CAP / st.bst();
+            hp *= k; atk *= k; def *= k; spd *= k;
+        }
+        double m = Growth.multiplier(o.level());
+        return new Combat(hp * m, atk * m, def * m, spd * m, o.level(), m, legend);
     }
 
     private static boolean hasType(Pokemon p, List<String> types) {
@@ -164,7 +178,8 @@ public class RunService {
         double total = 0;
         double[] w = new double[cands.size()];
         for (int i = 0; i < w.length; i++) {
-            w[i] = collection.isOwned(cands.get(i).getId()) ? 1 : 3;
+            Pokemon c = cands.get(i);
+            w[i] = (collection.isOwned(c.getId()) ? 1 : 3) * (Legendary.is(c.getId()) ? Legendary.APPEAR_WEIGHT : 1);
             total += w[i];
         }
         double r = ThreadLocalRandom.current().nextDouble(total);
@@ -201,8 +216,9 @@ public class RunService {
         int kills = Math.max(0, Math.min(req.kills(), (int) (elapsed * 6)));
         int elites = Math.max(0, Math.min(req.elites(), 12));
 
-        // 골드: 주운 만큼, 상한 검사. 쓰러지면 절반만
-        int cap = kills * 3 + elites * 20 + (won ? 300 : 0) + 50;
+        // 골드: 주운 만큼, 상한 검사. 쓰러지면 절반만. 부적금화면 상한도 1.5배
+        double goldMul = s.brought.containsKey("amulet-coin") ? 1.5 : 1;
+        int cap = (int) ((kills * 3 + elites * 25 + (won ? 400 : 0) + 80) * goldMul * 1.6);
         int gold = Math.max(0, Math.min(req.gold(), cap));
         if (!won) gold /= 2;
         long walletGold = wallet.add(gold);
@@ -211,26 +227,28 @@ public class RunService {
         Map<String, Integer> used = req.used() == null ? Map.of() : req.used();
         for (var e : s.brought.entrySet()) {
             ShopItems.Entry entry = ShopItems.byCode(e.getKey()).orElseThrow();
-            if (entry.use() != ShopItems.Use.HEAL) continue;
+            if (entry.use() != ShopItems.Use.HEAL && entry.use() != ShopItems.Use.REVIVE) continue;
             int back = e.getValue() - Math.max(0, Math.min(e.getValue(), used.getOrDefault(e.getKey(), 0)));
             if (back > 0) items.give(items.byCode(e.getKey()).getId(), back);
         }
 
-        // 경험치: 처치 수 + 승리 보너스. 쓰러지면 60%
-        int exp = (int) Math.round((10 + Math.min(kills, 400) * 0.15 + (won ? 60 : 0)) * (won ? 1 : 0.6));
+        // 경험치: 기본 + 처치 수 + 승리 보너스(보스 레벨이 높을수록). 쓰러지면 60%, 행복의알 1.5배
+        double expMul = (won ? 1 : 0.6) * (s.brought.containsKey("lucky-egg") ? 1.5 : 1);
+        int exp = (int) Math.round((40 + Math.min(kills, 600) * 0.3 + (won ? 80 + s.bossLevel * 4 : 0)) * expMul);
         List<ExpGain> gains = new ArrayList<>();
         for (int id : s.party) {
             OwnedDto before = collection.toDto(collection.entity(id));
             int[] r = collection.addExp(id, exp);
-            gains.add(new ExpGain(collection.toDto(collection.entity(id)), r[1] - r[0], before.exp(), before.stars()));
+            gains.add(new ExpGain(collection.toDto(collection.entity(id)), r[1] - r[0], before.exp(), before.level()));
         }
 
         boolean capturable = won && collection.canAcquire(s.bossId, s.bossShiny);
         String note = !won ? "쓰러져서 보스를 잡을 수 없어요"
-                : capturable ? (s.bossShiny ? "✨ 이로치 보스! 몬스터볼을 던져 보세요" : "몬스터볼을 던져 보세요 (최대 3번)")
+                : capturable ? (s.bossShiny ? "✨ 이로치 보스! 몬스터볼을 던져 보세요"
+                        : Legendary.is(s.bossId) ? "★ 전설의 포켓몬! 잡기 어려워요 (최대 3번)" : "몬스터볼을 던져 보세요 (최대 3번)")
                 : "이미 가진 포켓몬이라 놓아줬어요";
         if (won && !capturable) walletGold = wallet.add(100);   // 이미 가진 보스 → 보답 골드
-        return new Finish(won, gold, walletGold, gains, capturable, note, balls());
+        return new Finish(won, gold, walletGold, gains, capturable, note, balls(s));
     }
 
     /* ---------- 포획 ---------- */
@@ -245,9 +263,9 @@ public class RunService {
         Item ball = items.byCode(String.valueOf(req.ball()));
         if (ball.getKind() != ItemKind.BALL) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "몬스터볼이 아니에요");
         items.consume(ball.getId(), 1);
-        s.throwsUsed++;
 
-        int rate = ShopItems.ballRate(ball.getCode());
+        int rate = (int) ShopItems.ballRate(ball.getCode(), ctx(s))[0];
+        s.throwsUsed++;
         boolean success = ThreadLocalRandom.current().nextInt(100) < rate;
         // 흔들림 연출: 성공 3번, 실패는 0~2번 (아슬아슬할수록 많이)
         int shakes = success ? 3 : ThreadLocalRandom.current().nextInt(3);
@@ -255,19 +273,39 @@ public class RunService {
         if (success) {
             s.captured = true;
             caught = collection.acquire(s.bossId, s.bossShiny);
+            if (ball.getCode().equals("luxury-ball") && caught.level() < 5) {   // 럭셔리볼: Lv.5 부터
+                collection.addExp(s.bossId, com.pokefloor.collection.Growth.expAt(5) - caught.exp());
+                caught = collection.toDto(collection.entity(s.bossId));
+            }
         }
         boolean fled = !success && s.throwsUsed >= MAX_THROWS;
-        return new Capture(success, shakes, MAX_THROWS - s.throwsUsed, fled, caught, balls());
+        return new Capture(success, shakes, MAX_THROWS - s.throwsUsed, fled, caught, balls(s));
     }
 
-    /** 가진 몬스터볼 목록 + 포획률 */
+    private ShopItems.Ctx ctx(Session s) {
+        Pokemon b = s.boss;
+        return new ShopItems.Ctx(s.biome.name(), b.typeList(), b.getWeightKg(),
+                b.getStatSpeed() == null ? 0 : b.getStatSpeed(), s.bossLevel, s.leaderLevel, s.throwsUsed, Legendary.is(b.getId()));
+    }
+
+    /** 가진 몬스터볼 목록 (상황이 없으면 기본 포획률) */
     public List<Ball> balls() {
+        return balls(null);
+    }
+
+    /** 가진 몬스터볼 목록 + 이번 보스에게 던졌을 때 포획률 */
+    public List<Ball> balls(Session s) {
         return itemRepository.findAllByOrderByKindAscIdAsc().stream()
                 .filter(i -> i.getKind() == ItemKind.BALL)
-                .map(i -> new Ball(i.getCode(), i.getId(), i.getNameKo(), i.getSprite(), items.qty(i.getId()),
-                        ShopItems.ballRate(i.getCode())))
-                .filter(b -> b.qty() > 0)
-                .sorted(Comparator.comparingInt(Ball::rate))
+                .map(i -> {
+                    int qty = items.qty(i.getId());
+                    if (qty <= 0) return null;
+                    Object[] r = s == null ? new Object[]{ShopItems.byCode(i.getCode()).map(ShopItems.Entry::value).orElse(60), null}
+                            : ShopItems.ballRate(i.getCode(), ctx(s));
+                    return new Ball(i.getCode(), i.getId(), i.getNameKo(), i.getSprite(), qty, (int) r[0], (String) r[1]);
+                })
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparingInt(Ball::rate).reversed())
                 .toList();
     }
 

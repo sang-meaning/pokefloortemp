@@ -14,7 +14,8 @@ public record PokemonDto(
         double weightKg,
         boolean active,
         Sprites sprites,
-        Stats stats
+        Stats stats,
+        boolean legendary
 ) {
     /** 종족값 (bst = 합계) */
     public record Stats(int hp, int attack, int defense, int spAttack, int spDefense, int speed, int bst) {}
@@ -42,6 +43,7 @@ public record PokemonDto(
                         SPR + "shiny/" + p.getId() + ".png",
                         SPR + "other/official-artwork/shiny/" + p.getId() + ".png"),
                 p.hasStats() ? new Stats(p.getStatHp(), p.getStatAttack(), p.getStatDefense(),
-                        p.getStatSpAttack(), p.getStatSpDefense(), p.getStatSpeed(), p.baseTotal()) : null);
+                        p.getStatSpAttack(), p.getStatSpDefense(), p.getStatSpeed(), p.baseTotal()) : null,
+                Legendary.is(p.getId()));
     }
 }

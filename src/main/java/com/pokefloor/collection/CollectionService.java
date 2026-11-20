@@ -93,6 +93,15 @@ public class CollectionService {
         return acquire(pokemonId, false);
     }
 
+    /** 다음 레벨까지 경험치를 채움 (이상한사탕) → [이전, 이후] */
+    @Transactional
+    public int[] levelUp(int pokemonId) {
+        OwnedPokemon o = find(pokemonId);
+        Integer next = Growth.nextLevelExp(o.getExp());
+        if (next == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 Lv.100 이에요");
+        return addExp(pokemonId, next - o.getExp());
+    }
+
     /** 경험치 더하기 → [이전 경험치, 이후 경험치] */
     @Transactional
     public int[] addExp(int pokemonId, int n) {
@@ -163,9 +172,9 @@ public class CollectionService {
     public OwnedDto toDto(OwnedPokemon o) {
         PokemonDto p = pokemonService.get(o.getPokemonId());
         int exp = o.getExp();
-        int stars = Growth.stars(exp);
+        int level = Growth.level(exp);
         return new OwnedDto(p, o.getNickname(), o.isPlaced(), o.getBoxId(), o.getTileX(), o.getTileY(),
-                exp, stars, Growth.nextStarExp(exp), Growth.STAR_EXP[stars], o.isShiny(), o.isShowShiny(),
+                exp, level, Growth.expAt(level), Growth.nextLevelExp(exp), o.isShiny(), o.isShowShiny(),
                 o.getObtainedAt());
     }
 }
