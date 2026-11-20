@@ -18,7 +18,7 @@ const SKILL_MAX = 8;
 const ITEM_MAX = 5;
 const ITEM_SLOTS = 6;
 const EXPLODERS = new Set([74, 75, 76, 100, 101, 109, 110, 299, 337, 338, 343, 344, 436, 437]);
-const xpNeed = lv => Math.round(4 + lv * 3 + lv * lv * 0.2);
+const xpNeed = lv => Math.round(6 + lv * 4 + lv * lv * 0.3);   // 판 하나에 레벨 업 10~12번 정도
 const itemSprite = id => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${id}.png`;
 
 /* ---------- 지닌 물건 (레벨 업 카드) ---------- */
