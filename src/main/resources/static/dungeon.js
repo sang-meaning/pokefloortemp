@@ -588,6 +588,28 @@ function burst(color, n, stars) {
   }
 }
 
+/** 피해 통계: 파티원별 준 피해, 비율, 보스 피해, 처치, 치명타 */
+function renderDamage(g) {
+  const rows = g.members.map(mb => ({ mb, ...mb.stat }));
+  const total = rows.reduce((n, r) => n + r.dmg, 0) + (g.otherDmg || 0);
+  if (total <= 0) { $('res-dmg').innerHTML = ''; return; }
+  const fmt = n => Math.round(n).toLocaleString();
+  rows.sort((a, b) => b.dmg - a.dmg);
+  $('res-dmg').innerHTML = `<h3>⚔ 피해 통계 <small>총 ${fmt(total)}</small></h3>` + rows.map((r, i) => {
+    const pct = r.dmg / total * 100, sp = r.mb.sprites;
+    return `<div class="rd-row" style="--c:${r.mb.color};animation-delay:${0.15 + i * 0.12}s">
+      <img src="${sp.still || sp.front}" alt="">
+      <div class="rd-body">
+        <div class="rd-top"><b>${i === 0 ? '👑 ' : ''}${escapeHtml(r.mb.owned.nickname || r.mb.owned.pokemon.nameKo)}</b>
+          <span class="rd-skill">${escapeHtml(r.mb.skill.name)}${r.mb.awake ? ' · 각성' : ` Lv.${r.mb.slv}`}</span>
+          <em>${pct.toFixed(1)}%</em></div>
+        <div class="rd-bar"><i style="--w:${pct}%"></i></div>
+        <small>피해 ${fmt(r.dmg)} · 보스 ${fmt(r.boss)} · 처치 ${r.kills} · 치명타 ${r.hits ? Math.round(r.crits / r.hits * 100) : 0}%</small>
+      </div>
+    </div>`;
+  }).join('') + (g.otherDmg > 0 ? `<div class="rd-other">반격·기타 ${fmt(g.otherDmg)} (${(g.otherDmg / total * 100).toFixed(1)}%)</div>` : '');
+}
+
 function showResult() {
   const f = state.finish, g = state.game;
   $('result').classList.remove('hidden');
@@ -604,6 +626,7 @@ function showResult() {
   };
   step();
 
+  renderDamage(g);
   $('res-exp').innerHTML = f.exp.map((x, i) => {
     const o = x.owned, sp = spritesOf(o);
     const up = o.level > x.levelBefore;

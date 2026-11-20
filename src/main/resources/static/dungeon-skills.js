@@ -240,7 +240,7 @@ const CAST = {
     const color = g.colorOf(s);
     g.fx.push({ kind: 'charge', x: mb.x, y: mb.y - 14, life: 0.5, max: 0.5, color, mb });
     SFX.play('tele', 300);
-    setTimeout(() => {
+    g.later(mb, () => {
       const t2 = g.nearest(mb, 600);
       const a = t2 ? Math.atan2(t2.y - mb.y, t2.x - mb.x) : ang;
       const fire = off => g.fx.push({ kind: 'beam', big: true, x: mb.x, y: mb.y - 14, a: a + off, len: 620, w: (s.w || 34) * ar(g, mb),
@@ -294,7 +294,7 @@ const CAST = {
     // 대상 주변을 여러 번 베기
     const n = (s.n || 3) + xt(g, mb);
     for (let i = 0; i < n; i++) {
-      setTimeout(() => {
+      g.later(mb, () => {
         const e = i === 0 ? tgt : g.nearest(mb, 260);
         if (!e) return;
         g.fx.push({ kind: 'cut', x: e.x, y: e.y - 14, a: rand(0, Math.PI), life: 0.18, max: 0.18, color: g.colorOf(s) });
@@ -332,7 +332,7 @@ const CAST = {
     if (!g.nearest(mb, (s.R || 200) * ar(g, mb))) return false;
     const rings = s.rings || 2;
     for (let i = 0; i < rings; i++) {
-      setTimeout(() => g.fx.push({ kind: 'quake', ring: true, x: mb.x, y: mb.y, r: 0, R: (s.R || 200) * ar(g, mb), dmg: base * (s.mul || 1.2) / rings * 1.5,
+      g.later(mb, () => g.fx.push({ kind: 'quake', ring: true, x: mb.x, y: mb.y, r: 0, R: (s.R || 200) * ar(g, mb), dmg: base * (s.mul || 1.2) / rings * 1.5,
         type: s.t, color: g.colorOf(s), life: 0.5, max: 0.5, hit: new Set(), knock: 60 }), i * 150);
     }
     SFX.play('tele', 200);
@@ -410,7 +410,7 @@ const CAST = {
     const R = (s.R || 220) * ar(g, mb);
     if (!g.nearest(mb, R * 0.8)) return false;
     g.fx.push({ kind: 'charge', x: mb.x, y: mb.y - 14, life: 0.6, max: 0.6, color: '#ffffff', mb });
-    setTimeout(() => {
+    g.later(mb, () => {
       g.explode(mb.x, mb.y, R, base * (s.mul || 8), s.t, '#ffe680', true);
       g.burst(mb.x, mb.y, '#ffffff', 40, 420);
       g.burst(mb.x, mb.y, '#ff9f43', 40, 360);
@@ -665,7 +665,7 @@ Object.assign(CAST, {
   missile(g, mb, s, tgt, ang) {
     const n = (s.n || 3) + xt(g, mb);
     for (let i = 0; i < n; i++) {
-      setTimeout(() => {
+      g.later(mb, () => {
         const a = ang + Math.PI + (i - (n - 1) / 2) * 0.5;   // 뒤로 쏘아 올렸다가 꺾여 들어감
         g.shot(mb, s, a, { mul: s.mul || 1, r: 6, speed: 340, kind: 'missile', homing: 7, life: 2.4, explode: 42 * ar(g, mb), accel: 520 });
         SFX.play('shoot', 60);
@@ -690,7 +690,7 @@ Object.assign(CAST, {
       const a = ang + (l - (lines - 1) / 2) * 0.35;
       const steps = Math.round((s.len || 280) * ar(g, mb) / 34);
       for (let i = 1; i <= steps; i++) {
-        setTimeout(() => {
+        g.later(mb, () => {
           const x = mb.x + Math.cos(a) * i * 34, y = mb.y + Math.sin(a) * i * 34;
           g.fx.push({ kind: 'spike', x, y, life: 0.35, max: 0.35, color: g.colorOf(s) });
           for (const e of g.targetsList) if (e.hp > 0 && dist2(e, { x, y }) < (26 + e.r) ** 2) g.damage(e, base * (s.mul || 1.4) / 2, s.t, { x, y }, 60, i > 1);
@@ -706,7 +706,7 @@ Object.assign(CAST, {
   sweep(g, mb, s, tgt, ang, base) {
     g.fx.push({ kind: 'charge', x: mb.x, y: mb.y - 14, life: 0.6, max: 0.6, color: g.colorOf(s), mb });
     SFX.play('tele');
-    setTimeout(() => {
+    g.later(mb, () => {
       const beams = s.twin ? 2 : 1;
       for (let b = 0; b < beams; b++) {
         g.fx.push({ kind: 'sweep', mb, a: ang + b * Math.PI, len: 560 * ar(g, mb), w: 40, life: 1.6, max: 1.6, dmg: base * (s.mul || 1),
@@ -731,7 +731,7 @@ Object.assign(CAST, {
     const n = (s.n || 12) + xt(g, mb) * 3;
     const pool = g.targetsList.filter(e => dist2(e, mb) < 650 * 650);
     for (let i = 0; i < n; i++) {
-      setTimeout(() => {
+      g.later(mb, () => {
         const e = pool.length ? pickOne(pool) : null;
         const x = e ? e.x + rand(-30, 30) : mb.x + rand(-450, 450), y = e ? e.y + rand(-30, 30) : mb.y + rand(-300, 300);
         g.fx.push({ kind: 'meteor', x, y, r: 60 * ar(g, mb), dmg: base * (s.mul || 1.5), type: s.t, color: g.colorOf(s),
@@ -744,7 +744,7 @@ Object.assign(CAST, {
   /** 기둥: 리더 주위로 두 겹의 기둥이 솟구침 */
   pillars(g, mb, s, tgt, ang, base) {
     [120, 230, 340].forEach((R, ring) => {
-      setTimeout(() => {
+      g.later(mb, () => {
         const n = 8 + ring * 4;
         for (let i = 0; i < n; i++) {
           const a = i * Math.PI * 2 / n + ring * 0.3;
@@ -762,7 +762,7 @@ Object.assign(CAST, {
   rend(g, mb, s, tgt, ang, base) {
     const n = (s.n || 3) + xt(g, mb);
     for (let i = 0; i < n; i++) {
-      setTimeout(() => {
+      g.later(mb, () => {
         const e = g.nearest(mb, 600) || { x: mb.x + rand(-200, 200), y: mb.y + rand(-200, 200) };
         const a = rand(0, Math.PI);
         g.fx.push({ kind: 'rend', x: e.x, y: e.y, a, len: 1100, life: 0.5, max: 0.5, color: g.colorOf(s), hitDone: false, dmg: base * (s.mul || 3), type: s.t });
@@ -777,7 +777,7 @@ Object.assign(CAST, {
     g.fx.push({ kind: 'timestop', x: mb.x, y: mb.y, life: 1.6, max: 1.6, color: g.colorOf(s) });
     g.targetsList.forEach(e => { if (e.kind !== 'boss') e.sleep = 1.8; });
     SFX.play('tele');
-    setTimeout(() => {
+    g.later(mb, () => {
       g.targetsList.forEach(e => { if (dist2(e, g.player) < 700 * 700) g.damage(e, base * (s.mul || 4), s.t, g.player, 160); });
       g.flash = 0.9;
       g.shake = 20;

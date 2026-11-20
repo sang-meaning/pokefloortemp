@@ -84,6 +84,7 @@ class DungeonGame {
     this.mods = { dmg: 1, rate: 1, area: 1, extra: 0, move: 1, leech: 0, magnet: 1, gold: 1, crit: 0.05, armor: 1, superEff: 1,
       regen: 0, thorns: 0, xp: 1, flinch: 0, dodge: 0, sash: 0, healMul: 1 };
     this.gems = [];
+    this.src = null;       // 지금 피해를 주는 파티원 (피해 통계용)
     this.chests = [];
     this.hazards = [];     // 보스가 남긴 장판
     this.enemies = [];
@@ -138,6 +139,7 @@ class DungeonGame {
         x: ARENA / 2, y: ARENA / 2, flip: 1, cd: legend ? 1.2 : 0.4 + i * 0.25, cd2: 0.5,
         dmg: 8 + m.combat.attack * 0.12,
         slv: 1, power: 1, extra: 0, area: 1, awake: false, awT: 4,
+        stat: { dmg: 0, boss: 0, hits: 0, crits: 0, kills: 0 },
         cdMul: clamp(1.25 - spd / 250, 0.75, 1.15),
         angle: i * 2,
         spr: null,
@@ -365,7 +367,7 @@ class DungeonGame {
     SFX.play('starup');
     this.parts.push({ kind: 'ring', x: this.player.x, y: this.player.y - 20, r: 10, R: 160, life: 0.5, max: 0.5, color: '#7fe0ff', w: 8 });
     this.burst(this.player.x, this.player.y - 20, '#9fe8ff', 30, 260, 'star');
-    if (this.phase !== 'play') return;
+    if (this.phase !== 'play' && this.phase !== 'boss') return;
     if (this.picking) { this.pendingLv += ups; return; }
     this.pendingLv += ups - 1;
     this.offerPick(`레벨 ${this.lv - this.pendingLv}!`, '카드를 하나 골라 강해져요');
@@ -737,7 +739,7 @@ class DungeonGame {
     const speed = o.speed || 460;
     this.shots.push({
       x: mb.x, y: mb.y - 14, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
-      r: o.r || 6, dmg: mb.dmg * mb.power * this.mods.dmg * (o.mul || 1), type: s.t, color: typeColor(s.t),
+      r: o.r || 6, dmg: mb.dmg * mb.power * this.mods.dmg * (o.mul || 1), type: s.t, color: typeColor(s.t), owner: mb.m ? mb : this.src,
       life: o.life || 1.3, pierce: o.pierce || 1, hit: new Map(), kind: o.kind || 'bolt', t0: this.clock, ...o,
     });
   }
@@ -750,7 +752,25 @@ class DungeonGame {
     if (this.parts.length < 700) this.parts.push({ kind, x, y, vx, vy, life, max: life, size, color });
   }
 
+  /** 기술의 지연 공격: 그 사이 생긴 투사체·효과도 이 파티원 것으로 기록 */
+  later(mb, fn, ms) {
+    return setTimeout(() => this.as(mb, fn), ms);
+  }
+
+  as(mb, fn) {
+    const prev = this.src, n0 = this.fx.length;
+    this.src = mb;
+    try { return fn(); } finally {
+      for (let i = n0; i < this.fx.length; i++) if (!this.fx[i].owner) this.fx[i].owner = mb;
+      this.src = prev;
+    }
+  }
+
   attack(mb, s = mb.skill) {
+    return this.as(mb, () => this.attackNow(mb, s));
+  }
+
+  attackNow(mb, s) {
     const P = s.p;
     const self = ['aura', 'quake', 'wave', 'sing', 'selfdestruct', 'splash', 'heal', 'pillars', 'timestop', 'mines', 'starfall', 'legendrandom'].includes(P);
     const tgt = this.nearest(mb, P === 'melee' || P === 'whip' ? 150 : P === 'sweep' || P === 'rend' ? 520 : 440);
@@ -803,6 +823,16 @@ class DungeonGame {
     const crit = Math.random() < this.mods.crit + (from?.crit || 0);
     const dmg = amount * mult * (crit ? 1.5 : 1) * (e.kind === 'boss' && (e.state === 'enter' || e.state === 'vanish') ? 0 : 1);
     if (dmg <= 0) return;
+    const who = from?.owner || (from?.m ? from : null) || this.src;
+    if (who?.stat) {
+      const real = Math.min(dmg, Math.max(0, e.hp));
+      who.stat.dmg += real; who.stat.hits++;
+      if (crit) who.stat.crits++;
+      if (e.kind === 'boss') who.stat.boss += real;
+      if (e.hp - dmg <= 0 && e.kind !== 'boss') who.stat.kills++;
+    } else {
+      this.otherDmg = (this.otherDmg || 0) + Math.min(dmg, Math.max(0, e.hp));
+    }
     e.hp -= dmg;
     e.flash = 0.1;
     if (from && e.kind !== 'boss') {
@@ -1404,6 +1434,7 @@ class DungeonGame {
   /* ---------- 투사체 / 공격 판정 ---------- */
   updateShots(dt) {
     for (const s of this.shots) {
+      this.src = s.owner || null;
       s.life -= dt;
       if (s.accel) {
         const sp = Math.hypot(s.vx, s.vy), ns = Math.min(900, sp + s.accel * dt);
@@ -1456,6 +1487,7 @@ class DungeonGame {
         if (--s.pierce <= 0) s.life = 0;
       }
     }
+    this.src = null;
     this.shots = this.shots.filter(s => s.life > 0 && s.x > 0 && s.y > 0 && s.x < ARENA && s.y < ARENA);
   }
 
@@ -1464,8 +1496,9 @@ class DungeonGame {
     const arms = [[0, -1], [-1, 0], [1, 0], [-0.75, 0.85], [0.75, 0.85]], step = 28 * area;
     this.fx.push({ kind: 'flame', x, y, r: 34 * area, life: 0.9, max: 0.9, big: true });
     this.shake = Math.max(this.shake, 6);
+    const owner = this.src;
     for (let k = 1; k <= 4; k++) {
-      setTimeout(() => {
+      this.later(owner, () => {
         for (const [dx, dy] of arms) {
           const fx = x + dx * step * k, fy = y + dy * step * k;
           this.fx.push({ kind: 'flame', x: fx, y: fy, r: 24 * area, life: 0.8, max: 0.8 });
@@ -1486,6 +1519,7 @@ class DungeonGame {
 
   updateFx(dt) {
     for (const f of this.fx) {
+      this.src = f.owner || null;
       f.life -= dt;
       const prog = 1 - f.life / f.max;
       if (f.kind === 'beam' || f.kind === 'breath') {
@@ -1629,6 +1663,7 @@ class DungeonGame {
         }
       }
     }
+    this.src = null;
     this.fx = this.fx.filter(f => f.life > 0);
 
     // 보스 공격 예고 → 터짐
@@ -1720,7 +1755,7 @@ class DungeonGame {
     if (this.gems.some(g => g.got)) this.gems = this.gems.filter(g => !g.got);
     for (const ch of this.chests) {
       ch.t += dt;
-      if (this.phase !== 'play' || this.paused) continue;
+      if ((this.phase !== 'play' && this.phase !== 'boss') || this.paused) continue;
       if (dist2(ch, p) < 34 * 34) {
         ch.got = true;
         SFX.play('open');
